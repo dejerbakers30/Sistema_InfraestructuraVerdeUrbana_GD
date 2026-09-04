@@ -1,0 +1,63 @@
+# Gemelo Digital de Infraestructura Verde Urbana - Backend Dependencies
+# Python 3.11+
+
+# FastAPI and ASGI server
+fastapi
+uvicorn[standard]
+
+# Database
+sqlalchemy
+asyncpg
+alembic
+psycopg2-binary
+
+# Authentication and Security
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+pydantic-settings
+pydantic[email]
+
+# Task Queue (Celery + Redis)
+celery
+redis
+kombu
+
+# Geospatial Processing (Windows compatible versions)
+geoalchemy2
+geopandas
+shapely
+pyproj
+
+# Machine Learning & Statistical Processing
+scikit-learn
+xgboost
+scipy
+statsmodels
+scikit-posthocs
+torch
+
+# Data Processing
+pandas
+numpy
+
+# Report Generation
+reportlab
+python-docx
+openpyxl
+Pillow
+
+# HTTP and API
+httpx
+aiofiles
+
+# Utilities
+python-dotenv
+loguru
+python-dateutil
+pytz
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
