@@ -160,8 +160,8 @@ copy .env.local.example .env.local
 ### 4. Iniciar Servicios
 
 ```bash
-# Ejecutar script de inicio
-.\scripts\start_windows.bat
+# Ejecutar script de inicio (abre Backend y Frontend en terminales separadas)
+.\start_windows.bat
 ```
 
 Esto iniciará:
@@ -268,8 +268,9 @@ Simplemente ejecuta:
 ```bash
 cd backend
 venv\Scripts\activate
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+> **Nota para Windows**: Se utiliza `python -m uvicorn` para evitar errores del lanzador `.exe` en rutas de directorio con espacios.
 
 #### Frontend
 ```bash
@@ -281,7 +282,7 @@ npm run dev
 ```bash
 cd backend
 venv\Scripts\activate
-celery -A app.tasks.background_tasks worker --loglevel=info
+python -m celery -A app.tasks.background_tasks worker --loglevel=info
 ```
 
 ### Iniciar en Producción (Windows Services)
@@ -293,17 +294,27 @@ python service.py start
 # Worker (manual)
 cd backend
 venv\Scripts\activate
-celery -A app.tasks.background_tasks worker --loglevel=info
+python -m celery -A app.tasks.background_tasks worker --loglevel=info
 
 # Frontend
 pm2 start gemelo-digital-frontend
 ```
 
-### Iniciar Todo (Script Automático)
+### Iniciar Todo (Script Automático en Terminales Separadas)
+
+Puedes ejecutar el script desde la raíz o desde la carpeta `scripts`:
 
 ```bash
+# Desde la raíz del proyecto
+.\start_windows.bat
+
+# O desde la carpeta scripts
 .\scripts\start_windows.bat
 ```
+
+Este script abrirá automáticamente **dos ventanas de consola/terminal independientes**:
+1. **Gemelo Digital - Backend**: Ejecuta FastAPI (`uvicorn`) en `http://localhost:8000`.
+2. **Gemelo Digital - Frontend**: Ejecuta Next.js (`npm run dev`) en `http://localhost:3000`.
 
 ### Acceder a la Aplicación
 
@@ -349,8 +360,8 @@ La documentación automática de la API está disponible en:
 ### Backend Tests
 ```bash
 cd backend
-source venv/bin/activate
-pytest tests/ -v --cov=app
+venv\Scripts\activate
+python -m pytest tests/ -v --cov=app
 ```
 
 ### Frontend Tests
@@ -362,8 +373,8 @@ npm test
 ### Integration Tests
 ```bash
 cd backend
-source venv/bin/activate
-pytest tests/integration/ -v
+venv\Scripts\activate
+python -m pytest tests/integration/ -v
 ```
 
 ## 👥 Contribución

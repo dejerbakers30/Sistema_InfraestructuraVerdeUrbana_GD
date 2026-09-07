@@ -1,7 +1,22 @@
+'use client'
+
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
 
 export default function Home() {
+  const router = useRouter()
+
+  const handleGoToDashboard = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const token = localStorage.getItem('access_token')
+    if (token) {
+      router.push('/dashboard')
+    } else {
+      router.push('/login')
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-500 selection:text-white relative overflow-hidden transition-colors duration-300">
       {/* Background Radial Lights */}
@@ -64,15 +79,15 @@ export default function Home() {
         {/* CTA Buttons Container */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-5 max-w-xl mx-auto">
           {/* Main Dashboard Button */}
-          <Link
-            href="/dashboard"
+          <button
+            onClick={handleGoToDashboard}
             className="w-full sm:w-auto group relative px-8 py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-base rounded-2xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-400/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-3"
           >
             <span>Ir al Dashboard</span>
             <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
-          </Link>
+          </button>
 
           {/* Login Button */}
           <Link

@@ -148,57 +148,69 @@ async def upload_dataset(
     name: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """
     Upload a CSV or GeoJSON dataset for ML model training and predictions.
     """
-    filename = file.filename or "dataset.csv"
-    ext = Path(filename).suffix.lower()
-    if ext not in [".csv", ".geojson", ".json"]:
-        raise HTTPException(status_code=400, detail="Only CSV and GeoJSON dataset files are supported")
+    try:
+        filename = file.filename or "dataset.csv"
+        ext = Path(filename).suffix.lower()
+        if ext not in [".csv", ".geojson", ".json"]:
+            raise HTTPException(status_code=400, detail="Solo se admiten archivos .csv y .geojson")
 
-    saved_filename = f"{uuid.uuid4()}_{filename}"
-    saved_path = os.path.join(ML_UPLOAD_DIR, saved_filename)
+        saved_filename = f"{uuid.uuid4()}_{filename}"
+        os.makedirs(ML_UPLOAD_DIR, exist_ok=True)
+        saved_path = os.path.join(ML_UPLOAD_DIR, saved_filename)
 
-    with open(saved_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        with open(saved_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    # Read dataset metadata
-    df = ml_engine_service.load_dataset(saved_path)
-    columns_list = df.columns.tolist()
-    rows_count = len(df)
+        # Read dataset metadata
+        df = ml_engine_service.load_dataset(saved_path)
+        columns_list = df.columns.tolist()
+        rows_count = len(df)
 
-    dataset_obj = MLDataset(
-        name=name or filename,
-        description=description or f"Dataset uploaded by {current_user.email}",
-        filename=filename,
-        file_path=saved_path,
-        file_type="geojson" if ext in [".geojson", ".json"] else "csv",
-        rows_count=rows_count,
-        columns_list=columns_list,
-        created_by=current_user.id
-    )
+        user_id_str = current_user.get("user_id") if isinstance(current_user, dict) else getattr(current_user, "id", None)
+        user_uuid = uuid.UUID(str(user_id_str)) if user_id_str else None
+        user_email = (current_user.get("email") if isinstance(current_user, dict) else getattr(current_user, "email", None)) or "usuario"
 
-    db.add(dataset_obj)
-    await db.commit()
-    await db.refresh(dataset_obj)
+        dataset_obj = MLDataset(
+            name=name or filename,
+            description=description or f"Dataset subido por {user_email}",
+            filename=filename,
+            file_path=saved_path,
+            file_type="geojson" if ext in [".geojson", ".json"] else "csv",
+            rows_count=rows_count,
+            columns_list=columns_list,
+            created_by=user_uuid
+        )
 
-    return {
-        "id": str(dataset_obj.id),
-        "name": dataset_obj.name,
-        "filename": dataset_obj.filename,
-        "rows_count": dataset_obj.rows_count,
-        "columns_list": dataset_obj.columns_list,
-        "file_type": dataset_obj.file_type,
-        "message": "Dataset uploaded successfully"
-    }
+        db.add(dataset_obj)
+        await db.commit()
+        await db.refresh(dataset_obj)
+
+        return {
+            "id": str(dataset_obj.id),
+            "name": dataset_obj.name,
+            "filename": dataset_obj.filename,
+            "rows_count": dataset_obj.rows_count,
+            "columns_list": dataset_obj.columns_list,
+            "file_type": dataset_obj.file_type,
+            "message": "Dataset subido correctamente"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=f"Error procesando dataset: {str(e)}")
 
 
 @router.get("/datasets", response_model=List[Dict[str, Any]])
 async def list_datasets(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Lists all uploaded datasets available for training"""
     stmt = select(MLDataset).order_by(MLDataset.created_at.desc())
@@ -226,7 +238,7 @@ async def start_training_job(
     target_variable: str = Form("temperature"),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """
     Launches asynchronous training of all 5 mandatory models (XGBoost, RF, SVR, Stacking, CNN-LSTM)
@@ -238,13 +250,16 @@ async def start_training_job(
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
+    user_id_str = current_user.get("user_id") if isinstance(current_user, dict) else getattr(current_user, "id", None)
+    user_uuid = uuid.UUID(str(user_id_str)) if user_id_str else None
+
     job = MLTrainingJob(
         dataset_id=dataset.id,
         name=name,
         target_variable=target_variable,
         status=MLJobStatus.QUEUED,
         progress=0.0,
-        created_by=current_user.id
+        created_by=user_uuid
     )
 
     db.add(job)

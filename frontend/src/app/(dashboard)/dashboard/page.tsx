@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import MapContainer from '@/components/maps/MapContainer'
 import KPIPanel from '@/components/dashboard/KPIPanel'
@@ -11,15 +12,42 @@ import WindChart from '@/components/charts/WindChart'
 import PETChart from '@/components/charts/PETChart'
 import ThemeToggle from '@/components/ThemeToggle'
 import MLEngineDashboard from '@/components/ml/MLEngineDashboard'
+import ReportsDashboard from '@/components/reports/ReportsDashboard'
 
 export default function DashboardPage() {
-  const [selectedScenario, setSelectedScenario] = useState<string | null>('1')
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ml'>('dashboard')
+  const router = useRouter()
+  const [selectedScenario, setSelectedScenario] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'ml' | 'dashboard' | 'reports'>('ml')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token')
+    if (!token) {
+      router.push('/login')
+    } else {
+      setIsAuthenticated(true)
+      setCheckingAuth(false)
+    }
+  }, [router])
 
   const handleLogout = () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     window.location.href = '/login'
+  }
+
+  if (checkingAuth || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-4">
+        <div className="relative flex items-center justify-center mb-4">
+          <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+          <span className="absolute text-2xl">🌱</span>
+        </div>
+        <h2 className="text-xl font-bold tracking-tight mb-1">Verificando sesión...</h2>
+        <p className="text-sm text-slate-400">Accediendo a la plataforma de Infraestructura Verde</p>
+      </div>
+    )
   }
 
   return (
@@ -29,24 +57,35 @@ export default function DashboardPage() {
 
       {/* Navigation Header */}
       <header className="relative z-10 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/60 backdrop-blur-xl transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-3 group">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap lg:flex-nowrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4 lg:gap-6 flex-wrap sm:flex-nowrap">
+            <Link href="/" className="flex items-center gap-3 group shrink-0">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform">
                 <span className="text-xl font-black text-slate-950">🌱</span>
               </div>
-              <div>
+              <div className="shrink-0">
                 <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight block leading-none">Dashboard</span>
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium tracking-wide">Infraestructura Verde</span>
               </div>
             </Link>
 
-            {/* View Selector Tabs */}
-            <div className="hidden md:flex items-center p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+            {/* View Selector Tabs (Secuencia Lógica: Motor ML -> Simulación & Mapas -> Reportes) */}
+            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setActiveTab('ml')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'ml'
+                    ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🤖</span> Motor ML
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('dashboard')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   activeTab === 'dashboard'
                     ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -56,19 +95,19 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('ml')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  activeTab === 'ml'
+                onClick={() => setActiveTab('reports')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'reports'
                     ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>🤖</span> Motor ML (5 Modelos)
+                <span>📄</span> Reportes
               </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3 shrink-0">
             {activeTab === 'dashboard' && (
               <ScenarioSelector 
                 selectedScenario={selectedScenario}
@@ -82,7 +121,7 @@ export default function DashboardPage() {
 
             <button
               onClick={handleLogout}
-              className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-red-400/50 transition-all"
+              className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-red-400/50 transition-all whitespace-nowrap"
             >
               Cerrar Sesión
             </button>
@@ -92,7 +131,9 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="relative z-10 max-w-7xl mx-auto p-6 space-y-6">
-        {activeTab === 'ml' ? (
+        {activeTab === 'reports' ? (
+          <ReportsDashboard />
+        ) : activeTab === 'ml' ? (
           <MLEngineDashboard />
         ) : (
           <>
@@ -167,4 +208,5 @@ export default function DashboardPage() {
     </div>
   )
 }
+
 
