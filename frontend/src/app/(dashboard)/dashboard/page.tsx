@@ -16,10 +16,11 @@ import ReportsDashboard from '@/components/reports/ReportsDashboard'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [selectedScenario, setSelectedScenario] = useState<string | null>(null)
+  const [selectedScenario, setSelectedScenario] = useState<string | null>('1')
   const [activeTab, setActiveTab] = useState<'ml' | 'dashboard' | 'reports'>('ml')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [isTrainingActive, setIsTrainingActive] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('access_token')
@@ -105,6 +106,14 @@ export default function DashboardPage() {
                 <span>📄</span> Reportes
               </button>
             </div>
+
+            {/* Visual Indicator during Training */}
+            {isTrainingActive && (
+              <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-1.5 animate-pulse shrink-0">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                ⏳ Entrenamiento en curso (Segundo plano)...
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
@@ -130,80 +139,82 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto p-6 space-y-6">
-        {activeTab === 'reports' ? (
+      <main className="relative z-10 max-w-7xl mx-auto p-6">
+        <div className={activeTab === 'reports' ? 'block' : 'hidden'}>
           <ReportsDashboard />
-        ) : activeTab === 'ml' ? (
-          <MLEngineDashboard />
-        ) : (
-          <>
-            {/* KPI Panel */}
-            <KPIPanel scenarioId={selectedScenario} />
+        </div>
 
-            {/* Map and Temperature Chart Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Map */}
-              <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-emerald-500/30">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span className="text-emerald-500">📍</span> Mapa Interactivo GIS
-                  </h2>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-300 dark:border-emerald-500/30">
-                    Capas Activas
-                  </span>
-                </div>
-                <div className="h-96 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
-                  <MapContainer scenarioId={selectedScenario} />
-                </div>
+        <div className={activeTab === 'ml' ? 'block' : 'hidden'}>
+          <MLEngineDashboard onTrainingStateChange={setIsTrainingActive} />
+        </div>
+
+        <div className={activeTab === 'dashboard' ? 'block space-y-6' : 'hidden'}>
+          {/* KPI Panel */}
+          <KPIPanel scenarioId={selectedScenario} />
+
+          {/* Map and Temperature Chart Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Map */}
+            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-emerald-500/30">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="text-emerald-500">📍</span> Mapa Interactivo GIS
+                </h2>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-300 dark:border-emerald-500/30">
+                  Capas Activas
+                </span>
               </div>
-
-              {/* Temperature Chart */}
-              <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-teal-500/30">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span className="text-teal-500">🌡️</span> Temperatura vs Tiempo
-                  </h2>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-semibold border border-teal-300 dark:border-teal-500/30">
-                    24 Horas
-                  </span>
-                </div>
-                <div className="h-96">
-                  <TemperatureChart scenarioId={selectedScenario} />
-                </div>
+              <div className="h-96 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                <MapContainer scenarioId={selectedScenario} />
               </div>
             </div>
 
-            {/* Additional Charts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-cyan-500/30">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <span>💧</span> Humedad Relativa
+            {/* Temperature Chart */}
+            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-teal-500/30">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="text-teal-500">🌡️</span> Temperatura vs Tiempo
                 </h2>
-                <div className="h-64">
-                  <HumidityChart scenarioId={selectedScenario} />
-                </div>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-semibold border border-teal-300 dark:border-teal-500/30">
+                  24 Horas
+                </span>
               </div>
-
-              <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-emerald-500/30">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <span>💨</span> Velocidad del Viento
-                </h2>
-                <div className="h-64">
-                  <WindChart scenarioId={selectedScenario} />
-                </div>
-              </div>
-
-              <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-teal-500/30">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <span>🧘</span> PET (Confort Térmico)
-                </h2>
-                <div className="h-64">
-                  <PETChart scenarioId={selectedScenario} />
-                </div>
+              <div className="h-96">
+                <TemperatureChart scenarioId={selectedScenario} />
               </div>
             </div>
-          </>
-        )}
+          </div>
+
+          {/* Additional Charts Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-cyan-500/30">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <span>💧</span> Humedad Relativa
+              </h2>
+              <div className="h-64">
+                <HumidityChart scenarioId={selectedScenario} />
+              </div>
+            </div>
+
+            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-emerald-500/30">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <span>💨</span> Velocidad del Viento
+              </h2>
+              <div className="h-64">
+                <WindChart scenarioId={selectedScenario} />
+              </div>
+            </div>
+
+            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all hover:border-teal-500/30">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <span>🧘</span> PET (Confort Térmico)
+              </h2>
+              <div className="h-64">
+                <PETChart scenarioId={selectedScenario} />
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   )

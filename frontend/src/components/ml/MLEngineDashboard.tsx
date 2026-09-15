@@ -31,7 +31,11 @@ interface StatisticalTestsData {
   conclusion_text?: string
 }
 
-export default function MLEngineDashboard() {
+export default function MLEngineDashboard({
+  onTrainingStateChange
+}: {
+  onTrainingStateChange?: (isTraining: boolean) => void
+}) {
   const [file, setFile] = useState<File | null>(null)
   const [datasets, setDatasets] = useState<any[]>([])
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>('')
@@ -45,6 +49,47 @@ export default function MLEngineDashboard() {
 
   const [models, setModels] = useState<ModelMetric[]>([])
   const [statsData, setStatsData] = useState<StatisticalTestsData | null>(null)
+
+  // Initialize persistent states from sessionStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const savedDatasetId = sessionStorage.getItem('ml_selected_dataset_id')
+    const savedTargetVar = sessionStorage.getItem('ml_target_variable')
+    const savedJobId = sessionStorage.getItem('ml_job_id')
+    const savedIsTraining = sessionStorage.getItem('ml_is_training') === 'true'
+    const savedProgress = sessionStorage.getItem('ml_progress')
+    const savedModels = sessionStorage.getItem('ml_models')
+    const savedStats = sessionStorage.getItem('ml_stats_data')
+
+    if (savedDatasetId) setSelectedDatasetId(savedDatasetId)
+    if (savedTargetVar) setTargetVariable(savedTargetVar)
+    if (savedJobId) setJobId(savedJobId)
+    if (savedIsTraining) setIsTraining(true)
+    if (savedProgress) setProgress(parseFloat(savedProgress))
+    if (savedModels) {
+      try { setModels(JSON.parse(savedModels)) } catch (e) {}
+    }
+    if (savedStats) {
+      try { setStatsData(JSON.parse(savedStats)) } catch (e) {}
+    }
+  }, [])
+
+  // Synchronize state changes to sessionStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (selectedDatasetId) sessionStorage.setItem('ml_selected_dataset_id', selectedDatasetId)
+    if (targetVariable) sessionStorage.setItem('ml_target_variable', targetVariable)
+    if (jobId) sessionStorage.setItem('ml_job_id', jobId)
+    sessionStorage.setItem('ml_is_training', isTraining ? 'true' : 'false')
+    sessionStorage.setItem('ml_progress', progress.toString())
+    if (models.length > 0) sessionStorage.setItem('ml_models', JSON.stringify(models))
+    if (statsData) sessionStorage.setItem('ml_stats_data', JSON.stringify(statsData))
+  }, [selectedDatasetId, targetVariable, jobId, isTraining, progress, models, statsData])
+
+  useEffect(() => {
+    onTrainingStateChange?.(isTraining)
+  }, [isTraining, onTrainingStateChange])
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -71,7 +116,8 @@ export default function MLEngineDashboard() {
       if (res.ok) {
         const data = await res.json()
         setDatasets(data)
-        if (data.length > 0 && !selectedDatasetId) {
+        const savedDatasetId = typeof window !== 'undefined' ? sessionStorage.getItem('ml_selected_dataset_id') : null
+        if (data.length > 0 && !selectedDatasetId && !savedDatasetId) {
           setSelectedDatasetId(data[0].id)
         }
       }
@@ -100,10 +146,12 @@ export default function MLEngineDashboard() {
 
           if (data.status === 'completed') {
             setIsTraining(false)
+            sessionStorage.setItem('ml_is_training', 'false')
             showToast('¡Entrenamiento completado exitosamente! Evaluación de modelos finalizada.', 'success')
             fetchJobResults(jobId)
           } else if (data.status === 'failed') {
             setIsTraining(false)
+            sessionStorage.setItem('ml_is_training', 'false')
             showToast(`Error en el entrenamiento: ${data.error_message || 'Fallo inesperado'}`, 'error')
           }
         }
@@ -325,6 +373,12 @@ export default function MLEngineDashboard() {
                 onChange={e => setFile(e.target.files?.[0] || null)}
                 className="w-full text-xs text-slate-600 dark:text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-200 dark:file:bg-slate-800 file:text-teal-700 dark:file:text-teal-400 hover:file:bg-slate-300 dark:hover:file:bg-slate-700 cursor-pointer border border-slate-300 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 p-2"
               />
+              {selectedDatasetId && (
+                <div className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20">
+                  <span>📁 Dataset Activo en Memoria:</span>
+                  <span className="font-bold">{datasets.find(d => d.id === selectedDatasetId)?.name || 'Dataset Cargado'}</span>
+                </div>
+              )}
             </div>
             <button
               type="submit"

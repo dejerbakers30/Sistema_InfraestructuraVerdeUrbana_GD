@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import PrintableReportDocument from './PrintableReportDocument'
 
 export interface PreviewData {
   title: string
@@ -56,6 +57,19 @@ export default function ReportPreviewModal({
 }: ReportPreviewModalProps) {
   const [activeSheetTab, setActiveSheetTab] = useState<'kpi' | 'gi' | 'ts' | 'ml'>('gi')
   const [isDownloading, setIsDownloading] = useState(false)
+
+  React.useEffect(() => {
+    if (!data) return
+    if (data.report_type === 'green_infrastructure') {
+      setActiveSheetTab('gi')
+    } else if (data.report_type === 'simulation') {
+      setActiveSheetTab('ts')
+    } else if (data.report_type === 'ml_evaluation') {
+      setActiveSheetTab('ml')
+    } else {
+      setActiveSheetTab('kpi')
+    }
+  }, [data])
 
   if (!isOpen || !data) return null
 
@@ -182,181 +196,13 @@ export default function ReportPreviewModal({
         <div className="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950/80 print:bg-white print:p-0">
           
           {/* Printable Report Document - Visible on Print and on PDF tab */}
-          {(selectedFormat === 'pdf' || true) && (
-            <div
-              id="printable-report-document"
-              className={`${
-                selectedFormat === 'pdf' ? 'block' : 'hidden print:block'
-              } bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-8 max-w-4xl mx-auto print:shadow-none print:border-none print:p-0 print:bg-white print:text-black`}
-            >
-              {/* PDF / Print Document Header */}
-              <div className="border-b-2 border-teal-600 pb-4 mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-black text-teal-800 dark:text-teal-400 print:text-black tracking-tight">
-                    Gemelo Digital de Infraestructura Verde Urbana
-                  </h1>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 print:text-gray-700 font-semibold uppercase tracking-wider mt-1">
-                    Informe Descriptivo & Listados Microclimáticos | Fecha: {data.generated_at}
-                  </p>
-                </div>
-                <span className="text-xs font-bold px-3 py-1 bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 rounded-full border border-teal-300 dark:border-teal-700 print:hidden">
-                  Formato PDF / Imprimible
-                </span>
-              </div>
-
-              {/* Title & Executive Summary */}
-              <div className="mb-6 bg-teal-50/50 dark:bg-slate-800/40 p-5 rounded-2xl border border-teal-100 dark:border-slate-800 print:border-slate-300 print:bg-slate-50">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white print:text-black mb-2">
-                  {data.title}
-                </h2>
-                <p className="text-sm text-slate-700 dark:text-slate-300 print:text-black leading-relaxed">
-                  {data.summary}
-                </p>
-              </div>
-
-              {/* Section 1: KPIs Grid */}
-              <div className="mb-8">
-                <h3 className="text-sm font-bold text-teal-700 dark:text-teal-400 print:text-black uppercase tracking-wider mb-3">
-                  1. Indicadores y KPIs Microclimáticos
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 print:grid-cols-3">
-                  {data.kpis.map((kpi, i) => (
-                    <div key={i} className="p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700/80 print:bg-white print:border-slate-300">
-                      <div className="text-xs text-slate-500 dark:text-slate-400 print:text-gray-700 font-medium">{kpi.metric}</div>
-                      <div className="text-lg font-extrabold text-teal-600 dark:text-teal-300 print:text-black my-0.5">{kpi.value}</div>
-                      <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 print:bg-slate-200 print:text-black">
-                        {kpi.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section 2: Green Infrastructure List Table */}
-              <div className="mb-8">
-                <h3 className="text-sm font-bold text-teal-700 dark:text-teal-400 print:text-black uppercase tracking-wider mb-3">
-                  2. Listado Descriptivo de Infraestructura Verde Urbana
-                </h3>
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 print:border-slate-300">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-teal-700 text-white font-semibold print:bg-slate-200 print:text-black">
-                      <tr>
-                        <th className="p-2.5">Código</th>
-                        <th className="p-2.5">Nombre Elemento</th>
-                        <th className="p-2.5">Especie / Tipo</th>
-                        <th className="p-2.5 text-center">Altura</th>
-                        <th className="p-2.5 text-center">LAI</th>
-                        <th className="p-2.5 text-right">Efecto Enfriamiento</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800 print:divide-slate-300">
-                      {data.green_infrastructure_list.map((item, i) => (
-                        <tr key={i} className={i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/50'}>
-                          <td className="p-2.5 font-bold text-teal-600 dark:text-teal-400 print:text-black">{item.id}</td>
-                          <td className="p-2.5 font-medium text-slate-900 dark:text-white print:text-black">{item.name}</td>
-                          <td className="p-2.5 text-slate-600 dark:text-slate-300 print:text-black">{item.type}</td>
-                          <td className="p-2.5 text-center print:text-black">{item.height} m</td>
-                          <td className="p-2.5 text-center font-semibold print:text-black">{item.lai}</td>
-                          <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400 print:text-black">{item.cooling_effect}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Section 3: Time Series Data Sample */}
-              <div className="mb-8">
-                <h3 className="text-sm font-bold text-teal-700 dark:text-teal-400 print:text-black uppercase tracking-wider mb-3">
-                  3. Listado de Series Temporales (Muestra 24h)
-                </h3>
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 print:border-slate-300">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-800 text-white font-semibold print:bg-slate-200 print:text-black">
-                      <tr>
-                        <th className="p-2.5">Hora</th>
-                        <th className="p-2.5 text-center">Temperatura (°C)</th>
-                        <th className="p-2.5 text-center">Humedad (%)</th>
-                        <th className="p-2.5 text-center">PET Confort (°C)</th>
-                        <th className="p-2.5 text-right">Viento (m/s)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800 print:divide-slate-300">
-                      {data.time_series_sample.map((ts, i) => (
-                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                          <td className="p-2.5 font-bold text-slate-900 dark:text-white print:text-black">{ts.time}</td>
-                          <td className="p-2.5 text-center font-medium print:text-black">{ts.temperature} °C</td>
-                          <td className="p-2.5 text-center print:text-black">{ts.humidity} %</td>
-                          <td className="p-2.5 text-center font-bold text-teal-600 dark:text-teal-400 print:text-black">{ts.pet} °C</td>
-                          <td className="p-2.5 text-right print:text-black">{ts.wind_speed ?? 2.4} m/s</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Section 4: ML Benchmark */}
-              <div className="mb-6">
-                <h3 className="text-sm font-bold text-teal-700 dark:text-teal-400 print:text-black uppercase tracking-wider mb-3">
-                  4. Evaluación Comparativa de Modelos ML
-                </h3>
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 print:border-slate-300">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-teal-900 text-white font-semibold print:bg-slate-200 print:text-black">
-                      <tr>
-                        <th className="p-2.5">Modelo ML</th>
-                        <th className="p-2.5 text-center">RMSE</th>
-                        <th className="p-2.5 text-center">MAE</th>
-                        <th className="p-2.5 text-center">R² Score</th>
-                        <th className="p-2.5 text-right">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800 print:divide-slate-300">
-                      {data.ml_models.map((m, i) => (
-                        <tr key={i} className={m.is_active ? 'bg-teal-50/80 dark:bg-teal-950/40 font-bold' : ''}>
-                          <td className="p-2.5 text-slate-900 dark:text-white print:text-black">{m.name}</td>
-                          <td className="p-2.5 text-center print:text-black">{m.rmse.toFixed(4)}</td>
-                          <td className="p-2.5 text-center print:text-black">{m.mae.toFixed(4)}</td>
-                          <td className="p-2.5 text-center font-mono text-emerald-600 dark:text-emerald-400 print:text-black">{m.r2.toFixed(4)}</td>
-                          <td className="p-2.5 text-right print:text-black">
-                            {m.is_active ? (
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold print:bg-slate-300 print:text-black">
-                                ⭐ Activo Ganador
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 text-[10px] print:text-gray-600">Evaluado</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Section 5: Methodology & Footer Signatures for Print */}
-              <div className="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800 print:border-slate-400 text-xs text-slate-500 dark:text-slate-400 print:text-black">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <p className="font-bold text-slate-800 dark:text-slate-200 print:text-black">
-                      Gemelo Digital de Infraestructura Verde Urbana
-                    </p>
-                    <p className="text-[11px] text-slate-500 print:text-gray-600">
-                      Simulación ENVI-met + Machine Learning Ensembles | Certificación Digital
-                    </p>
-                  </div>
-                  <div className="text-right text-[11px] print:text-black">
-                    <p><b>Página 1 de 1</b></p>
-                    <p className="text-slate-400 print:text-gray-600 font-mono text-[10px]">ID: {data.report_id || 'GD-IVU-2026-EXP'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <PrintableReportDocument
+            data={data}
+            className={selectedFormat === 'pdf' ? 'block' : 'hidden print:block'}
+          />
 
           {selectedFormat === 'excel' && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden max-w-4xl mx-auto">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden max-w-4xl mx-auto print:hidden">
               {/* Excel Spreadsheet Header Bar */}
               <div className="bg-emerald-700 text-white p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 font-bold text-sm">
@@ -364,23 +210,12 @@ export default function ReportPreviewModal({
                   <span>Microsoft Excel - {data.title}.xlsx</span>
                 </div>
                 <span className="text-xs bg-emerald-800 px-3 py-1 rounded font-mono">
-                  Libro Abierto: 4 Hojas
+                  Libro Abierto
                 </span>
               </div>
 
-              {/* Excel Sheet Tabs */}
+              {/* Excel Sheet Tabs (Tailored to non-empty data) */}
               <div className="bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 border-b border-slate-300 dark:border-slate-700 overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={() => setActiveSheetTab('gi')}
-                  className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
-                    activeSheetTab === 'gi'
-                      ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  🍃 Infraestructura Verde
-                </button>
                 <button
                   type="button"
                   onClick={() => setActiveSheetTab('kpi')}
@@ -392,28 +227,45 @@ export default function ReportPreviewModal({
                 >
                   📈 Resumen & KPIs
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSheetTab('ts')}
-                  className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
-                    activeSheetTab === 'ts'
-                      ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  ⏱️ Series Temporales
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSheetTab('ml')}
-                  className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
-                    activeSheetTab === 'ml'
-                      ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  🤖 Modelos ML
-                </button>
+                {data.green_infrastructure_list && data.green_infrastructure_list.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('gi')}
+                    className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
+                      activeSheetTab === 'gi'
+                        ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    🍃 Infraestructura Verde
+                  </button>
+                )}
+                {data.time_series_sample && data.time_series_sample.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('ts')}
+                    className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
+                      activeSheetTab === 'ts'
+                        ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    ⏱️ Series Temporales
+                  </button>
+                )}
+                {data.ml_models && data.ml_models.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('ml')}
+                    className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
+                      activeSheetTab === 'ml'
+                        ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    🤖 Modelos ML Benchmark
+                  </button>
+                )}
               </div>
 
               {/* Grid Content */}
@@ -520,7 +372,7 @@ export default function ReportPreviewModal({
           )}
 
           {selectedFormat === 'word' && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-xl p-10 max-w-4xl mx-auto font-sans leading-relaxed text-slate-800 dark:text-slate-200">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-xl p-10 max-w-4xl mx-auto font-sans leading-relaxed text-slate-800 dark:text-slate-200 print:hidden">
               {/* Word Document Banner Header */}
               <div className="border-b border-blue-600 pb-4 mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -552,34 +404,94 @@ export default function ReportPreviewModal({
                 {data.summary}
               </p>
 
-              <h2 className="text-base font-bold text-blue-800 dark:text-blue-400 border-b border-slate-200 dark:border-slate-800 pb-1 mb-3">
-                2. Listado Descriptivo de Infraestructura Verde Urbana
-              </h2>
-              <table className="w-full text-xs text-left mb-6 border border-slate-300 dark:border-slate-700">
-                <thead className="bg-slate-100 dark:bg-slate-800 font-bold">
-                  <tr>
-                    <th className="p-2 border border-slate-300 dark:border-slate-700">Código</th>
-                    <th className="p-2 border border-slate-300 dark:border-slate-700">Nombre</th>
-                    <th className="p-2 border border-slate-300 dark:border-slate-700">Tipo</th>
-                    <th className="p-2 border border-slate-300 dark:border-slate-700 text-center">LAI</th>
-                    <th className="p-2 border border-slate-300 dark:border-slate-700 text-right">Efecto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.green_infrastructure_list.map((item, i) => (
-                    <tr key={i}>
-                      <td className="p-2 border border-slate-300 dark:border-slate-700 font-bold text-blue-600">{item.id}</td>
-                      <td className="p-2 border border-slate-300 dark:border-slate-700 font-medium">{item.name}</td>
-                      <td className="p-2 border border-slate-300 dark:border-slate-700">{item.type}</td>
-                      <td className="p-2 border border-slate-300 dark:border-slate-700 text-center">{item.lai}</td>
-                      <td className="p-2 border border-slate-300 dark:border-slate-700 text-right font-semibold text-emerald-600">{item.cooling_effect}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {data.green_infrastructure_list && data.green_infrastructure_list.length > 0 && (
+                <>
+                  <h2 className="text-base font-bold text-blue-800 dark:text-blue-400 border-b border-slate-200 dark:border-slate-800 pb-1 mb-3">
+                    2. Listado Descriptivo de Infraestructura Verde Urbana
+                  </h2>
+                  <table className="w-full text-xs text-left mb-6 border border-slate-300 dark:border-slate-700">
+                    <thead className="bg-slate-100 dark:bg-slate-800 font-bold">
+                      <tr>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700">Código</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700">Nombre</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700">Tipo</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700 text-center">LAI</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700 text-right">Efecto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.green_infrastructure_list.map((item, i) => (
+                        <tr key={i}>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 font-bold text-blue-600">{item.id}</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 font-medium">{item.name}</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700">{item.type}</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 text-center">{item.lai}</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 text-right font-semibold text-emerald-600">{item.cooling_effect}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {data.time_series_sample && data.time_series_sample.length > 0 && (
+                <>
+                  <h2 className="text-base font-bold text-blue-800 dark:text-blue-400 border-b border-slate-200 dark:border-slate-800 pb-1 mb-3">
+                    {data.green_infrastructure_list?.length ? '3.' : '2.'} Registros de Series Temporales (Muestra 24h)
+                  </h2>
+                  <table className="w-full text-xs text-left mb-6 border border-slate-300 dark:border-slate-700">
+                    <thead className="bg-slate-100 dark:bg-slate-800 font-bold">
+                      <tr>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700">Hora</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700 text-center">Temperatura (°C)</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700 text-center">Humedad (%)</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700 text-right">PET (°C)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.time_series_sample.map((ts, i) => (
+                        <tr key={i}>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 font-bold">{ts.time}</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 text-center">{ts.temperature} °C</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 text-center">{ts.humidity} %</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 text-right font-semibold text-blue-600">{ts.pet} °C</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {data.ml_models && data.ml_models.length > 0 && (
+                <>
+                  <h2 className="text-base font-bold text-blue-800 dark:text-blue-400 border-b border-slate-200 dark:border-slate-800 pb-1 mb-3">
+                    {data.green_infrastructure_list?.length && data.time_series_sample?.length ? '4.' : (data.green_infrastructure_list?.length || data.time_series_sample?.length) ? '3.' : '2.'} Benchmark de Modelos ML
+                  </h2>
+                  <table className="w-full text-xs text-left mb-6 border border-slate-300 dark:border-slate-700">
+                    <thead className="bg-slate-100 dark:bg-slate-800 font-bold">
+                      <tr>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700">Modelo ML</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700 text-center">RMSE</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700 text-center">MAE</th>
+                        <th className="p-2 border border-slate-300 dark:border-slate-700 text-right">R² Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.ml_models.map((m, i) => (
+                        <tr key={i} className={m.is_active ? 'bg-blue-50/60 font-bold' : ''}>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 font-medium">{m.name}</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 text-center">{m.rmse.toFixed(4)}</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 text-center">{m.mae.toFixed(4)}</td>
+                          <td className="p-2 border border-slate-300 dark:border-slate-700 text-right font-mono text-emerald-600">{m.r2.toFixed(4)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
 
               <h2 className="text-base font-bold text-blue-800 dark:text-blue-400 border-b border-slate-200 dark:border-slate-800 pb-1 mb-3">
-                3. Metodología & Notas
+                Metodología & Notas
               </h2>
               <div className="bg-blue-50/60 dark:bg-slate-800/60 p-4 rounded-xl text-xs text-slate-700 dark:text-slate-300 border border-blue-200 dark:border-slate-700">
                 Este reporte integra simulaciones espacio-temporales microclimáticas ENVI-met con modelos de ensamble ML para guiar la toma de decisiones en infraestructura urbana sostenible.

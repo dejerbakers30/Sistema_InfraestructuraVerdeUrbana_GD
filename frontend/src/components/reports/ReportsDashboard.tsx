@@ -2,129 +2,138 @@
 
 import React, { useState } from 'react'
 import ReportPreviewModal, { PreviewData } from './ReportPreviewModal'
+import PrintableReportDocument from './PrintableReportDocument'
 
 export default function ReportsDashboard() {
   const [reportName, setReportName] = useState('Reporte Descriptivo de Infraestructura Verde')
   const [reportType, setReportType] = useState<'green_infrastructure' | 'simulation' | 'ml_evaluation' | 'projects'>('green_infrastructure')
   const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'excel' | 'word'>('pdf')
-  
-  const [includeTables, setIncludeTables] = useState(true)
-  const [includeMethodology, setIncludeMethodology] = useState(true)
-  const [includeML, setIncludeML] = useState(true)
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [isDownloadingDirectly, setIsDownloadingDirectly] = useState(false)
 
-  // Recent Report Templates
-  const recentReports = [
-    {
-      id: 'rep-001',
-      name: 'Listado Descriptivo de Infraestructura Verde Urbana',
-      type: 'Listado de Especies & Elementos',
-      date: '06/09/2026 20:30',
-      format: 'pdf' as const
-    },
-    {
-      id: 'rep-002',
-      name: 'Resumen Microclimático y Confort Térmico PET',
-      type: 'Datos Descriptivos & KPIs',
-      date: '06/09/2026 19:15',
-      format: 'excel' as const
-    },
-    {
-      id: 'rep-003',
-      name: 'Benchmark Comparativo de Modelos ML Regresión',
-      type: 'Evaluación de Algoritmos ML',
-      date: '06/09/2026 18:00',
-      format: 'word' as const
-    }
-  ]
+  // Construct tailored data preview according to reportType
+  const getTailoredPreviewData = (): PreviewData => {
+    const generatedAt = new Date().toLocaleDateString('es-ES') + ' ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 
-  // Default mock data for live preview fallback
-  const mockPreviewData: PreviewData = {
-    title: reportName || 'Reporte de Infraestructura Verde Urbana',
-    report_type: reportType,
-    format: selectedFormat,
-    generated_at: new Date().toLocaleDateString('es-ES') + ' ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-    summary: 'El área de estudio evalúa 5 zonas prioritarias de cobertura vegetal en la zona urbana. Se registró una temperatura promedio de 25.4 °C y un confort térmico PET de 27.8 °C. El modelo de ensamble Random Forest Regressor demostró una reducción de temperatura de hasta -3.8 °C en horas pico.',
-    kpis: [
-      { metric: 'Temperatura Promedio', value: '25.4 °C', status: 'Óptimo' },
-      { metric: 'Humedad Relativa Promedio', value: '64.5 %', status: 'Normal' },
-      { metric: 'Velocidad de Viento Media', value: '2.4 m/s', status: 'Favorable' },
-      { metric: 'Índice PET (Confort)', value: '27.8 °C', status: 'Confortable' },
-      { metric: 'Reducción Máx. Temperatura', value: '-3.8 °C', status: 'Significativo' },
-      { metric: 'Coeficiente de Escorrentía', value: '0.32', status: 'Reducido' }
-    ],
-    green_infrastructure_list: [
-      { id: 'GI-001', name: 'Bosque Urbano Central', type: 'Árbol (Jacaranda mimosifolia)', species: 'Jacaranda mimosifolia', height: 12.5, crown_diameter: 8.0, lai: 4.2, cooling_effect: '-2.3 °C' },
-      { id: 'GI-002', name: 'Parque Lineal Avenida España', type: 'Arbustos & Césped', species: 'Ficus benjamina & Pennisetum', height: 2.1, crown_diameter: 3.5, lai: 2.8, cooling_effect: '-1.1 °C' },
-      { id: 'GI-003', name: 'Techo Verde Municipal', type: 'Green Roof (Extensivo)', species: 'Sedum album / Sedum acre', height: 0.2, crown_diameter: 15.0, lai: 3.5, cooling_effect: '-3.8 °C (Cubierta)' },
-      { id: 'GI-004', name: 'Jardín de Lluvia Plaza Mayor', type: 'Rain Garden / Bio-retención', species: 'Carex pendula & Iris pseudacorus', height: 0.8, crown_diameter: 6.0, lai: 3.1, cooling_effect: '-1.5 °C' },
-      { id: 'GI-005', name: 'Jardín Vertical Edificio UNT', type: 'Vertical Garden', species: 'Heuchera & Nephrolepis exaltata', height: 8.0, crown_diameter: 12.0, lai: 4.8, cooling_effect: '-4.1 °C (Fachada)' }
-    ],
-    ml_models: [
-      { name: 'Random Forest Regressor', rmse: 0.3214, mae: 0.2410, r2: 0.9482, mse: 0.1033, is_active: true },
-      { name: 'XGBoost Regressor', rmse: 0.3451, mae: 0.2612, r2: 0.9391, mse: 0.1191, is_active: false },
-      { name: 'LightGBM Regressor', rmse: 0.3580, mae: 0.2745, r2: 0.9345, mse: 0.1281, is_active: false },
-      { name: 'Deep Neural Network (MLP)', rmse: 0.3892, mae: 0.2980, r2: 0.9230, mse: 0.1514, is_active: false },
-      { name: 'Support Vector Regressor (SVR)', rmse: 0.4210, mae: 0.3315, r2: 0.9095, mse: 0.1772, is_active: false }
-    ],
-    time_series_sample: [
-      { time: '08:00:00', temperature: 22.1, humidity: 72.0, pet: 23.5, wind_speed: 2.1 },
-      { time: '10:00:00', temperature: 24.5, humidity: 68.0, pet: 26.2, wind_speed: 2.3 },
-      { time: '12:00:00', temperature: 27.8, humidity: 60.0, pet: 30.1, wind_speed: 2.8 },
-      { time: '14:00:00', temperature: 28.5, humidity: 58.0, pet: 31.4, wind_speed: 3.0 },
-      { time: '16:00:00', temperature: 26.9, humidity: 63.0, pet: 29.0, wind_speed: 2.5 },
-      { time: '18:00:00', temperature: 24.2, humidity: 70.0, pet: 25.3, wind_speed: 2.0 }
-    ]
+    if (reportType === 'green_infrastructure') {
+      return {
+        title: reportName || 'Listado Descriptivo de Infraestructura Verde Urbana',
+        report_type: 'green_infrastructure',
+        format: selectedFormat,
+        generated_at: generatedAt,
+        summary: 'Inventario técnico y métricas bio-físicas de elementos de infraestructura verde urbana. Evalúa especies vegetales, dimensiones de copa, Índice de Área Foliar (LAI) y capacidad estimada de enfriamiento microclimático por evapotranspiración.',
+        kpis: [
+          { metric: 'Superficie Verde Total', value: '18.4 ha', status: 'Óptimo' },
+          { metric: 'Arbolado Urbano Censado', value: '1,240 ej.', status: 'Normal' },
+          { metric: 'Índice Foliar LAI Medio', value: '3.85', status: 'Alto' },
+          { metric: 'Captación de CO₂ Est.', value: '45.2 t/año', status: 'Significativo' }
+        ],
+        green_infrastructure_list: [
+          { id: 'GI-001', name: 'Bosque Urbano Central', type: 'Árbol (Jacaranda mimosifolia)', species: 'Jacaranda mimosifolia', height: 12.5, crown_diameter: 8.0, lai: 4.2, cooling_effect: '-2.3 °C' },
+          { id: 'GI-002', name: 'Parque Lineal Avenida España', type: 'Arbustos & Césped', species: 'Ficus benjamina & Pennisetum', height: 2.1, crown_diameter: 3.5, lai: 2.8, cooling_effect: '-1.1 °C' },
+          { id: 'GI-003', name: 'Techo Verde Municipal', type: 'Green Roof (Extensivo)', species: 'Sedum album / Sedum acre', height: 0.2, crown_diameter: 15.0, lai: 3.5, cooling_effect: '-3.8 °C (Cubierta)' },
+          { id: 'GI-004', name: 'Jardín de Lluvia Plaza Mayor', type: 'Rain Garden / Bio-retención', species: 'Carex pendula & Iris pseudacorus', height: 0.8, crown_diameter: 6.0, lai: 3.1, cooling_effect: '-1.5 °C' },
+          { id: 'GI-005', name: 'Jardín Vertical Edificio UNT', type: 'Vertical Garden', species: 'Heuchera & Nephrolepis exaltata', height: 8.0, crown_diameter: 12.0, lai: 4.8, cooling_effect: '-4.1 °C (Fachada)' }
+        ],
+        ml_models: [],
+        time_series_sample: []
+      }
+    }
+
+    if (reportType === 'simulation') {
+      return {
+        title: reportName || 'Resumen Microclimático y Confort Térmico PET',
+        report_type: 'simulation',
+        format: selectedFormat,
+        generated_at: generatedAt,
+        summary: 'Registro de datos descriptivos microclimáticos y simulación diurna de 24 horas. Incluye la curva de temperatura del aire, radiación solar, humedad relativa y la variación del Índice de Confort Térmico Fisiológico (PET).',
+        kpis: [
+          { metric: 'Temperatura Promedio', value: '25.4 °C', status: 'Normal' },
+          { metric: 'Humedad Relativa Promedio', value: '64.5 %', status: 'Aceptable' },
+          { metric: 'Velocidad de Viento Media', value: '2.4 m/s', status: 'Favorable' },
+          { metric: 'Índice PET Promedio', value: '27.8 °C', status: 'Confortable' },
+          { metric: 'Reducción Máx. UHI', value: '-2.6 °C', status: 'Significativo' }
+        ],
+        green_infrastructure_list: [],
+        ml_models: [],
+        time_series_sample: [
+          { time: '08:00:00', temperature: 22.1, humidity: 72.0, pet: 23.5, wind_speed: 2.1 },
+          { time: '10:00:00', temperature: 24.5, humidity: 68.0, pet: 26.2, wind_speed: 2.3 },
+          { time: '12:00:00', temperature: 27.8, humidity: 60.0, pet: 30.1, wind_speed: 2.8 },
+          { time: '14:00:00', temperature: 28.5, humidity: 58.0, pet: 31.4, wind_speed: 3.0 },
+          { time: '16:00:00', temperature: 26.9, humidity: 63.0, pet: 29.0, wind_speed: 2.5 },
+          { time: '18:00:00', temperature: 24.2, humidity: 70.0, pet: 25.3, wind_speed: 2.0 }
+        ]
+      }
+    }
+
+    if (reportType === 'ml_evaluation') {
+      return {
+        title: reportName || 'Benchmark Comparativo de Modelos ML & Pruebas Estadísticas',
+        report_type: 'ml_evaluation',
+        format: selectedFormat,
+        generated_at: generatedAt,
+        summary: 'Evaluación estadística comparativa entre 3 modelos de regresión tradicionales (XGBoost, Random Forest, SVR) y 2 metamodelos híbridos (Stacking Ensemble y CNN-LSTM Neural Net) para la predicción del microclima urbano.',
+        kpis: [
+          { metric: 'Modelo Recomendado', value: 'Stacking (XGB+RF)', status: 'Ganador Activo' },
+          { metric: 'Precisión R² Score', value: '94.82 %', status: 'Sobresaliente' },
+          { metric: 'RMSE de Regresión', value: '0.3214', status: 'Mínimo Error' },
+          { metric: 'Test de Friedman', value: 'F = 18.42 (p < 0.001)', status: 'Significativo' },
+          { metric: 'Diferencia Crítica Nemenyi', value: 'CD = 1.124', status: 'Distintivo' }
+        ],
+        green_infrastructure_list: [],
+        time_series_sample: [],
+        ml_models: [
+          { name: 'Stacking Ensemble (XGB+RF)', rmse: 0.3214, mae: 0.2410, r2: 0.9482, mse: 0.1033, is_active: true },
+          { name: 'CNN-LSTM Neural Net', rmse: 0.3340, mae: 0.2520, r2: 0.9412, mse: 0.1115, is_active: false },
+          { name: 'Random Forest Regressor', rmse: 0.3451, mae: 0.2612, r2: 0.9391, mse: 0.1191, is_active: false },
+          { name: 'XGBoost Regressor', rmse: 0.3580, mae: 0.2745, r2: 0.9345, mse: 0.1281, is_active: false },
+          { name: 'Support Vector Regressor (SVR)', rmse: 0.4210, mae: 0.3315, r2: 0.9095, mse: 0.1772, is_active: false }
+        ]
+      }
+    }
+
+    // Default: 'projects' (Reporte Completo Integrado)
+    return {
+      title: reportName || 'Reporte Completo Integrado de Infraestructura Verde y ML',
+      report_type: 'projects',
+      format: selectedFormat,
+      generated_at: generatedAt,
+      summary: 'Informe ejecutivo consolidado que integra el inventario completo de infraestructura verde, los resultados de la simulación microclimática diurna y el benchmark comparativo de los modelos de aprendizaje automático.',
+      kpis: [
+        { metric: 'Superficie Verde Total', value: '18.4 ha', status: 'Óptimo' },
+        { metric: 'Confort Térmico PET', value: '27.8 °C', status: 'Confortable' },
+        { metric: 'Reducción Máx. Temp.', value: '-3.8 °C', status: 'Significativo' },
+        { metric: 'Modelo ML Ganador', value: 'Stacking Ensemble', status: 'Activo' },
+        { metric: 'Precisión R² ML', value: '94.82 %', status: 'Alto' }
+      ],
+      green_infrastructure_list: [
+        { id: 'GI-001', name: 'Bosque Urbano Central', type: 'Árbol (Jacaranda mimosifolia)', species: 'Jacaranda mimosifolia', height: 12.5, crown_diameter: 8.0, lai: 4.2, cooling_effect: '-2.3 °C' },
+        { id: 'GI-002', name: 'Parque Lineal Avenida España', type: 'Arbustos & Césped', species: 'Ficus benjamina & Pennisetum', height: 2.1, crown_diameter: 3.5, lai: 2.8, cooling_effect: '-1.1 °C' },
+        { id: 'GI-003', name: 'Techo Verde Municipal', type: 'Green Roof (Extensivo)', species: 'Sedum album / Sedum acre', height: 0.2, crown_diameter: 15.0, lai: 3.5, cooling_effect: '-3.8 °C (Cubierta)' }
+      ],
+      time_series_sample: [
+        { time: '08:00:00', temperature: 22.1, humidity: 72.0, pet: 23.5, wind_speed: 2.1 },
+        { time: '12:00:00', temperature: 27.8, humidity: 60.0, pet: 30.1, wind_speed: 2.8 },
+        { time: '16:00:00', temperature: 26.9, humidity: 63.0, pet: 29.0, wind_speed: 2.5 }
+      ],
+      ml_models: [
+        { name: 'Stacking Ensemble (XGB+RF)', rmse: 0.3214, mae: 0.2410, r2: 0.9482, mse: 0.1033, is_active: true },
+        { name: 'CNN-LSTM Neural Net', rmse: 0.3340, mae: 0.2520, r2: 0.9412, mse: 0.1115, is_active: false },
+        { name: 'Random Forest Regressor', rmse: 0.3451, mae: 0.2612, r2: 0.9391, mse: 0.1191, is_active: false }
+      ]
+    }
   }
 
   // Handle Preview Action
   const handleOpenPreview = async () => {
     setIsLoadingPreview(true)
     try {
-      // Try to fetch structured preview data from API endpoint
-      const response = await fetch('/api/v1/reports/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: reportName,
-          format: selectedFormat,
-          report_type: reportType,
-          include_tables: includeTables,
-          include_methodology: includeMethodology
-        })
-      })
-
-      if (response.ok) {
-        const apiData = await response.json()
-        setPreviewData({
-          ...mockPreviewData,
-          title: apiData.title || reportName,
-          summary: apiData.summary || mockPreviewData.summary,
-          kpis: apiData.kpis || mockPreviewData.kpis,
-          green_infrastructure_list: apiData.green_infrastructure_list || mockPreviewData.green_infrastructure_list,
-          ml_models: apiData.ml_models || mockPreviewData.ml_models,
-          time_series_sample: apiData.time_series_sample || mockPreviewData.time_series_sample,
-          format: selectedFormat
-        })
-      } else {
-        // Fallback to local mock preview
-        setPreviewData({
-          ...mockPreviewData,
-          title: reportName,
-          format: selectedFormat
-        })
-      }
-    } catch {
-      // Graceful fallback to client-side data preview
-      setPreviewData({
-        ...mockPreviewData,
-        title: reportName,
-        format: selectedFormat
-      })
+      const data = getTailoredPreviewData()
+      setPreviewData(data)
     } finally {
       setIsLoadingPreview(false)
       setIsPreviewOpen(true)
@@ -162,6 +171,15 @@ export default function ReportsDashboard() {
     } finally {
       setIsDownloadingDirectly(false)
     }
+  }
+
+  // Handle Direct Print Action
+  const handleDirectPrint = () => {
+    const data = getTailoredPreviewData()
+    setPreviewData(data)
+    setTimeout(() => {
+      window.print()
+    }, 100)
   }
 
   return (
@@ -370,39 +388,6 @@ export default function ReportsDashboard() {
           </div>
         </div>
 
-        {/* Custom Options Toggles */}
-        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-6 text-xs font-semibold text-slate-700 dark:text-slate-300">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeTables}
-              onChange={(e) => setIncludeTables(e.target.checked)}
-              className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500"
-            />
-            <span>Incluir tablas de listados y series temporales</span>
-          </label>
-
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeML}
-              onChange={(e) => setIncludeML(e.target.checked)}
-              className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500"
-            />
-            <span>Incluir evaluación comparativa ML</span>
-          </label>
-
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeMethodology}
-              onChange={(e) => setIncludeMethodology(e.target.checked)}
-              className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500"
-            />
-            <span>Incluir metodología y marco legal</span>
-          </label>
-        </div>
-
         {/* Primary Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 border-t border-slate-200 dark:border-slate-800">
           
@@ -428,7 +413,7 @@ export default function ReportsDashboard() {
             type="button"
             onClick={() => handleDirectDownload()}
             disabled={isDownloadingDirectly}
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 hover:border-slate-600 shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 hover:border-slate-600 shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
           >
             {isDownloadingDirectly ? (
               <span className="animate-spin text-lg">⏳</span>
@@ -436,85 +421,26 @@ export default function ReportsDashboard() {
               <span className="text-lg">📥</span>
             )}
             <span>
-              {isDownloadingDirectly ? 'Descargando...' : `Descargar ${selectedFormat.toUpperCase()} Directo`}
+              {isDownloadingDirectly ? 'Descargando...' : `Descargar ${selectedFormat.toUpperCase()}`}
             </span>
+          </button>
+
+          {/* Button 3: Direct Print */}
+          <button
+            type="button"
+            onClick={handleDirectPrint}
+            className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-sm border border-slate-300 dark:border-slate-700 shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
+          >
+            <span className="text-lg">🖨️</span>
+            <span>Imprimir Reporte</span>
           </button>
         </div>
 
       </div>
 
-      {/* Templates & Recent Reports Table */}
-      <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>📋</span> Plantillas e Historial de Reportes Generados
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Acceso rápido a reportes previos para vista previa o descarga inmediata en PDF, Excel o Word.
-            </p>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold">
-              <tr>
-                <th className="p-3.5">Nombre del Reporte</th>
-                <th className="p-3.5">Tipo de Contenido</th>
-                <th className="p-3.5">Fecha</th>
-                <th className="p-3.5 text-center">Formato</th>
-                <th className="p-3.5 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {recentReports.map((rep) => (
-                <tr key={rep.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-white">
-                    {rep.name}
-                  </td>
-                  <td className="p-3.5 text-slate-600 dark:text-slate-400 font-medium">
-                    {rep.type}
-                  </td>
-                  <td className="p-3.5 text-slate-500 dark:text-slate-500 font-mono">
-                    {rep.date}
-                  </td>
-                  <td className="p-3.5 text-center">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      rep.format === 'pdf'
-                        ? 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800'
-                        : rep.format === 'excel'
-                        ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                        : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800'
-                    }`}>
-                      {rep.format}
-                    </span>
-                  </td>
-                  <td className="p-3.5 text-right space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedFormat(rep.format)
-                        setReportName(rep.name)
-                        handleOpenPreview()
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-300 dark:border-teal-700/60 font-semibold hover:bg-teal-100 transition-colors"
-                    >
-                      👁️ Preview
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDirectDownload(rep.format)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                    >
-                      📥 Descargar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Always Rendered Hidden Print Document Container for Browser Print Engine */}
+      <div className="hidden print:block">
+        <PrintableReportDocument data={previewData || getTailoredPreviewData()} />
       </div>
 
       {/* Interactive Live Preview Modal */}

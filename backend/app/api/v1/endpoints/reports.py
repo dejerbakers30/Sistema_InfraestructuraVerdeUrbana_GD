@@ -120,6 +120,7 @@ async def export_report(
     report_config = {
         "report_id": f"export_{int(datetime.now().timestamp())}",
         "name": name.replace("_", " "),
+        "report_type": report_type,
         "include_tables": True,
         "include_methodology": True
     }

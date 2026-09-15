@@ -11,21 +11,20 @@ export default function MapContainer({ scenarioId }: { scenarioId: string | null
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Fetch spatial data from API
-    if (scenarioId) {
-      setLoading(false)
-      setMapData({
-        center: [-12.0464, -77.0428], // Lima coordinates
-        zoom: 13,
-        layers: [
-          {
-            type: 'heatmap',
-            data: [],
-            variable: 'temperature'
-          }
-        ]
-      })
-    }
+    const activeId = scenarioId || '1'
+    setLoading(false)
+    setMapData({
+      center: [-12.0464, -77.0428], // Lima coordinates
+      zoom: 13,
+      scenarioId: activeId,
+      layers: [
+        {
+          type: 'heatmap',
+          data: [],
+          variable: 'temperature'
+        }
+      ]
+    })
   }, [scenarioId])
 
   if (loading) {

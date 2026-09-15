@@ -30,29 +30,31 @@ export default function HumidityChart({ scenarioId }: { scenarioId: string | nul
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (scenarioId) {
-      setLoading(false)
-      const data = scenarioId === '2' 
-        ? [78, 82, 88, 75, 62, 55, 60, 72]
-        : [72, 78, 83, 68, 52, 45, 50, 63]
+    const activeId = scenarioId || '1'
+    setLoading(false)
 
-      setChartData({
-        labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
-        datasets: [
-          {
-            label: 'Humedad Relativa (%)',
-            data: data,
-            borderColor: 'rgb(14, 165, 233)',
-            backgroundColor: 'rgba(14, 165, 233, 0.15)',
-            fill: true,
-            tension: 0.4
-          }
-        ]
-      })
-    } else {
-      setLoading(false)
-      setChartData(null)
+    const humidityCurves: Record<string, number[]> = {
+      '1': [65, 70, 75, 60, 48, 42, 46, 58],
+      '2': [78, 82, 88, 75, 62, 55, 60, 72],
+      '3': [82, 86, 92, 80, 68, 62, 67, 78],
+      '4': [79, 84, 89, 76, 64, 58, 63, 74],
+      '5': [67, 72, 77, 62, 50, 44, 48, 60],
+      '6': [85, 90, 95, 84, 72, 66, 71, 82]
     }
+
+    setChartData({
+      labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+      datasets: [
+        {
+          label: 'Humedad Relativa (%)',
+          data: humidityCurves[activeId] || humidityCurves['1'],
+          borderColor: 'rgb(14, 165, 233)',
+          backgroundColor: 'rgba(14, 165, 233, 0.15)',
+          fill: true,
+          tension: 0.4
+        }
+      ]
+    })
   }, [scenarioId])
 
   if (loading) {

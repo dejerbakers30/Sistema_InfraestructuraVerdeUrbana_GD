@@ -30,23 +30,48 @@ export default function TemperatureChart({ scenarioId }: { scenarioId: string | 
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Fetch time series data from API
-    if (scenarioId) {
-      setLoading(false)
-      setChartData({
-        labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
-        datasets: [
-          {
-            label: 'Temperatura (°C)',
-            data: [18, 17, 16, 20, 25, 28, 26, 22],
-            borderColor: 'rgb(59, 130, 246)',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            fill: true,
-            tension: 0.4
-          }
-        ]
-      })
+    const activeId = scenarioId || '1'
+    setLoading(false)
+
+    const curves: Record<string, number[]> = {
+      '1': [20, 19, 18, 23, 29, 32, 29, 24], // Base (sin intervención) - Temperatura alta
+      '2': [18, 17, 16, 20, 25, 28, 26, 22], // Techos Verdes (-1.8 °C)
+      '3': [17, 16, 15, 19, 23, 26, 24, 20], // Arbolado Masivo (-2.4 °C)
+      '4': [18, 17, 16, 19, 24, 27, 25, 21], // Corredores Ecológicos (-2.1 °C)
+      '5': [19, 18, 17, 21, 26, 29, 27, 23], // Pavimentos Fríos (-1.5 °C)
+      '6': [16, 15, 14, 18, 22, 24, 22, 19]  // Híbrida Sintética (-3.2 °C)
     }
+
+    const scenarioNames: Record<string, string> = {
+      '1': 'Escenario Base',
+      '2': 'Techos Verdes (50%)',
+      '3': 'Arbolado Masivo',
+      '4': 'Corredores Ecológicos',
+      '5': 'Pavimentos Fríos',
+      '6': 'Intervención Híbrida'
+    }
+
+    setChartData({
+      labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+      datasets: [
+        {
+          label: `Temp. (°C) - ${scenarioNames[activeId] || 'Simulación'}`,
+          data: curves[activeId] || curves['1'],
+          borderColor: 'rgb(16, 185, 129)',
+          backgroundColor: 'rgba(16, 185, 129, 0.12)',
+          fill: true,
+          tension: 0.4
+        },
+        {
+          label: 'Línea Base Ref. (°C)',
+          data: curves['1'],
+          borderColor: 'rgba(239, 68, 68, 0.4)',
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.4
+        }
+      ]
+    })
   }, [scenarioId])
 
   if (loading || !chartData) {

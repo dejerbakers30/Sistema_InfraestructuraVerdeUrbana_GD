@@ -16,22 +16,62 @@ export default function KPIPanel({ scenarioId }: { scenarioId: string | null }) 
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (scenarioId) {
-      setLoading(false)
-      setKpiData({
+    const activeId = scenarioId || '1'
+    setLoading(false)
+
+    // Data mapped for all 6 scenarios
+    const metrics: Record<string, KPIData> = {
+      '1': {
+        avg_pet: 31.2,
+        green_area_ha: 10.2,
+        runoff_coefficient: 0.55,
+        temperature_reduction: 0.0,
+        biodiversity_index: 1.2,
+        thermal_comfort_zones: { comfortable: 20, slightly_uncomfortable: 40, uncomfortable: 30, very_uncomfortable: 10 }
+      },
+      '2': {
         avg_pet: 28.5,
         green_area_ha: 15.3,
         runoff_coefficient: 0.35,
-        temperature_reduction: 2.4,
+        temperature_reduction: 1.8,
         biodiversity_index: 2.1,
-        thermal_comfort_zones: {
-          comfortable: 45,
-          slightly_uncomfortable: 30,
-          uncomfortable: 20,
-          very_uncomfortable: 5
-        }
-      })
+        thermal_comfort_zones: { comfortable: 45, slightly_uncomfortable: 30, uncomfortable: 20, very_uncomfortable: 5 }
+      },
+      '3': {
+        avg_pet: 26.8,
+        green_area_ha: 22.8,
+        runoff_coefficient: 0.28,
+        temperature_reduction: 2.4,
+        biodiversity_index: 3.4,
+        thermal_comfort_zones: { comfortable: 60, slightly_uncomfortable: 25, uncomfortable: 12, very_uncomfortable: 3 }
+      },
+      '4': {
+        avg_pet: 27.2,
+        green_area_ha: 19.5,
+        runoff_coefficient: 0.32,
+        temperature_reduction: 2.1,
+        biodiversity_index: 2.9,
+        thermal_comfort_zones: { comfortable: 55, slightly_uncomfortable: 28, uncomfortable: 14, very_uncomfortable: 3 }
+      },
+      '5': {
+        avg_pet: 28.9,
+        green_area_ha: 11.0,
+        runoff_coefficient: 0.50,
+        temperature_reduction: 1.5,
+        biodiversity_index: 1.4,
+        thermal_comfort_zones: { comfortable: 42, slightly_uncomfortable: 35, uncomfortable: 18, very_uncomfortable: 5 }
+      },
+      '6': {
+        avg_pet: 25.1,
+        green_area_ha: 28.4,
+        runoff_coefficient: 0.20,
+        temperature_reduction: 3.2,
+        biodiversity_index: 4.2,
+        thermal_comfort_zones: { comfortable: 75, slightly_uncomfortable: 18, uncomfortable: 6, very_uncomfortable: 1 }
+      }
     }
+
+    setKpiData(metrics[activeId] || metrics['1'])
   }, [scenarioId])
 
   if (loading || !kpiData) {
