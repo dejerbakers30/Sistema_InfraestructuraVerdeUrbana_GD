@@ -14,6 +14,7 @@ psycopg2-binary
 # Authentication and Security
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt
 python-multipart
 pydantic-settings
 pydantic[email]
@@ -35,11 +36,13 @@ xgboost
 scipy
 statsmodels
 scikit-posthocs
-torch
+# torch (installed separately as torch CPU to avoid heavy CUDA packages)
 
 # Data Processing
 pandas
 numpy
+xarray
+netCDF4
 
 # Report Generation
 reportlab

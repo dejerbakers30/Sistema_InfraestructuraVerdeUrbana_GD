@@ -3,11 +3,12 @@ Celery background tasks for asynchronous processing.
 """
 
 from celery import Celery
+from app.core.config import settings
 
 celery_app = Celery(
     "gemelo_digital",
-    broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/0",
+    broker=settings.REDIS_URL,
+    backend=settings.REDIS_URL,
     include=["app.tasks.background_tasks"]
 )
 

@@ -168,7 +168,7 @@ CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
 -- Insert default admin user (password: admin123 - change this in production!)
 -- Password hash for 'admin123' (bcrypt)
 INSERT INTO users (email, hashed_password, full_name, role, is_active, is_verified)
-VALUES ('admin@gemelodigital.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU7vGyYq7y6i', 'System Administrator', 'admin', TRUE, TRUE)
+VALUES ('admin@gemelodigital.com', '$2b$12$X4iaQq/T4L2IA0/4ECAhoeJCHegFPgFE8YJBEd9v8hJwvuP8sKvJG', 'System Administrator', 'admin', TRUE, TRUE)
 ON CONFLICT (email) DO NOTHING;
 
 -- Grant permissions

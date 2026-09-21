@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 import json
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import AsyncSessionLocal
 from app.models.simulation import SimulationResult, SimulationStatus
 

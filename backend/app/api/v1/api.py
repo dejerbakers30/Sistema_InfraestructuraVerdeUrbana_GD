@@ -3,7 +3,7 @@ Main API router that aggregates all endpoint routers.
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, projects, simulations, reports, dashboard, ml
+from app.api.v1.endpoints import auth, projects, simulations, reports, dashboard, ml, ai_assistant
 
 api_router = APIRouter()
 
@@ -14,4 +14,5 @@ api_router.include_router(simulations.router, prefix="/simulations", tags=["simu
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(ml.router, prefix="/ml", tags=["machine-learning"])
+api_router.include_router(ai_assistant.router, prefix="/ai", tags=["ai-assistant"])
 

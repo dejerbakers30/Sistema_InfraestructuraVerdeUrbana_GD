@@ -35,5 +35,5 @@ export default function MapContainer({ scenarioId }: { scenarioId: string | null
     )
   }
 
-  return <Map data={mapData} />
+  return <Map data={mapData} scenarioId={scenarioId} />
 }

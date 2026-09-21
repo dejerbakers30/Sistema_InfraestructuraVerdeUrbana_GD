@@ -55,6 +55,15 @@ class Settings(BaseSettings):
         None,
         description="Path to ENVI-met license file"
     )
+    # Groq AI Assistant Configuration
+    GROQ_API_KEY: Optional[str] = Field(
+        default=None,
+        description="Groq Cloud API Key for AI Assistant and reasoning"
+    )
+    GROQ_MODEL: str = Field(
+        default="llama-3.3-70b-versatile",
+        description="Groq model identifier"
+    )
     
     # File Storage
     UPLOAD_DIR: str = Field(default="./uploads", description="Directory for uploaded files")

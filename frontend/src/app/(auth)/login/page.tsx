@@ -3,12 +3,18 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import ThemeToggle from '@/components/ThemeToggle'
+import { ShieldCheck, Sparkles } from 'lucide-react'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('admin@gemelodigital.com')
+  const [password, setPassword] = useState('admin123')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const handleAutofillAdmin = () => {
+    setEmail('admin@gemelodigital.com')
+    setPassword('admin123')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,6 +106,25 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Quick Admin Auto-fill Banner */}
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="text-slate-700 dark:text-slate-300">
+                  Acceso directo <strong>Admin</strong> precargado
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleAutofillAdmin}
+                className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-600 bg-emerald-500/15 hover:bg-emerald-500/25 px-2.5 py-1 rounded-lg transition-colors text-[11px]"
+                title="Autocompletar credenciales de administrador"
+              >
+                <Sparkles className="w-3 h-3 text-emerald-500" />
+                <span>Restablecer Admin</span>
+              </button>
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                 Correo Electrónico
@@ -116,8 +141,9 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-sm transition-all"
-                  placeholder="tu@email.com"
+                  autoComplete="email"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-sm transition-all font-mono"
+                  placeholder="admin@gemelodigital.com"
                 />
               </div>
             </div>
@@ -143,6 +169,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="current-password"
                   className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-sm transition-all"
                   placeholder="••••••••"
                 />
