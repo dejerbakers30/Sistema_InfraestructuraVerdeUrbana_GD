@@ -3,14 +3,24 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import ExecutiveSidebar, { ActiveModule } from '@/components/layout/ExecutiveSidebar'
 import EnhancedKPIPanel from '@/components/dashboard/EnhancedKPIPanel'
-import DigitalTwin3DViewer from '@/components/maps/DigitalTwin3DViewer'
 import AIPredictiveRecommender from '@/components/predictive/AIPredictiveRecommender'
 import GroqChatDrawer from '@/components/ai/GroqChatDrawer'
 import AIReasoningBadge from '@/components/ai/AIReasoningBadge'
 import MapContainer from '@/components/maps/MapContainer'
 import ScenarioSelector from '@/components/dashboard/ScenarioSelector'
+
+const DigitalTwin3DViewer = dynamic(() => import('@/components/maps/DigitalTwin3DViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full min-h-[500px] bg-slate-900 rounded-3xl flex flex-col items-center justify-center text-slate-400 p-6">
+      <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mb-3" />
+      <span className="text-xs font-semibold">Cargando visor 3D Three.js...</span>
+    </div>
+  ),
+})
 import TemperatureChart from '@/components/charts/TemperatureChart'
 import HumidityChart from '@/components/charts/HumidityChart'
 import WindChart from '@/components/charts/WindChart'
