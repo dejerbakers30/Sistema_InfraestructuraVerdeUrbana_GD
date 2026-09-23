@@ -65,6 +65,32 @@ class Settings(BaseSettings):
         description="Groq model identifier"
     )
     
+    # Langflow Agent Configuration
+    LANGFLOW_URL: str = Field(
+        default="http://localhost:7860",
+        description="Langflow Server URL"
+    )
+    LANGFLOW_USERNAME: str = Field(
+        default="langflow",
+        description="Langflow user"
+    )
+    LANGFLOW_PASSWORD: str = Field(
+        default="CambiaEstaClave123",
+        description="Langflow password"
+    )
+    LANGFLOW_API_KEY: Optional[str] = Field(
+        default="sk-2BkMQeosmoYUIMHmMkoTli4x3VgaOQFyEFnpHzlkcmo",
+        description="Langflow API Key for execution"
+    )
+    LANGFLOW_FLOW_ID: Optional[str] = Field(
+        default="311bf9f2-f7e5-41bb-8d34-dcf73ba2d176",
+        description="Active Langflow Flow ID for Urban Green Infrastructure Agent"
+    )
+    LANGFLOW_FLOW_NAME: str = Field(
+        default="Agente Gemelo Digital Urbano",
+        description="Target flow name in Langflow"
+    )
+    
     # File Storage
     UPLOAD_DIR: str = Field(default="./uploads", description="Directory for uploaded files")
     MAX_UPLOAD_SIZE: int = Field(default=524288000, description="Max upload size in bytes (500MB)")

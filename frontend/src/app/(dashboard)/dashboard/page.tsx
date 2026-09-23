@@ -49,6 +49,7 @@ import {
   ArrowUpRight,
   Eye,
   LogOut,
+  Workflow,
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -177,14 +178,14 @@ export default function DashboardPage() {
                 onScenarioChange={setSelectedScenario}
               />
 
-              {/* Groq AI Trigger Button */}
+              {/* Langflow AI Trigger Button */}
               <button
                 onClick={() => setIsGroqDrawerOpen(true)}
-                className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-500/15 via-emerald-500/10 to-cyan-500/15 border border-indigo-500/30 hover:border-indigo-400 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all shadow-sm group"
-                title="Abrir Asistente Groq IA"
+                className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-cyan-500/20 border border-emerald-500/30 hover:border-emerald-400 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all shadow-sm group hover:scale-[1.02]"
+                title="Abrir Asistente IA con Langflow"
               >
-                <Sparkles className="w-4 h-4 text-indigo-500 group-hover:rotate-12 transition-transform" />
-                <span>Asistente Groq</span>
+                <Workflow className="w-4 h-4 text-emerald-500 group-hover:rotate-12 transition-transform" />
+                <span>Asistente Langflow</span>
               </button>
 
               <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
@@ -595,17 +596,41 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      {/* Floating Groq Assistant Modal / Drawer (available from any view) */}
+      {/* Floating Action Button (FAB) for Langflow Agent (Always visible) */}
+      <button
+        onClick={() => setIsGroqDrawerOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs shadow-2xl shadow-emerald-500/40 border border-white/20 hover:scale-105 active:scale-95 transition-all group"
+        title="Abrir Chat con el Agente de Langflow"
+      >
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-200"></span>
+        </span>
+        <Workflow className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+        <span>Agente Langflow IA</span>
+      </button>
+
+      {/* Floating Langflow Assistant Modal / Drawer (available from any view) */}
       {isGroqDrawerOpen && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsGroqDrawerOpen(false)
+          }}
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200"
+        >
           <div className="relative w-full max-w-2xl">
             <button
               onClick={() => setIsGroqDrawerOpen(false)}
-              className="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-slate-900 border border-slate-700 text-white flex items-center justify-center text-sm shadow-xl hover:bg-slate-800"
+              className="absolute -top-3 -right-3 z-20 w-8 h-8 rounded-full bg-slate-900 border border-slate-700 text-white flex items-center justify-center text-sm shadow-xl hover:bg-slate-800"
+              title="Cerrar asistente"
             >
               ✕
             </button>
-            <GroqChatDrawer scenarioId={selectedScenario} />
+            <GroqChatDrawer
+              scenarioId={selectedScenario}
+              isOpen={isGroqDrawerOpen}
+              onClose={() => setIsGroqDrawerOpen(false)}
+            />
           </div>
         </div>
       )}

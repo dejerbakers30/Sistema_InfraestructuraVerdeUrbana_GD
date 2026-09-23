@@ -17,6 +17,7 @@ import {
   LogOut,
   Radio,
   FileText,
+  Workflow,
 } from 'lucide-react'
 
 export type ActiveModule = 'dashboard' | '3d-twin' | 'maps' | 'predictive' | 'reports' | 'ml' | 'groq-chat' | 'settings'
@@ -100,11 +101,11 @@ export default function ExecutiveSidebar({
     },
     {
       id: 'groq-chat',
-      label: 'Asistente IA Groq',
-      shortLabel: 'Chatbot',
-      icon: <MessageSquare className="w-5 h-5 text-indigo-400" />,
-      badge: groqKeyActive ? 'Online' : 'Eco',
-      badgeColor: groqKeyActive ? 'emerald' : 'slate',
+      label: 'Asistente IA Langflow',
+      shortLabel: 'Langflow',
+      icon: <Workflow className="w-5 h-5 text-emerald-400" />,
+      badge: 'Agente',
+      badgeColor: 'emerald',
     },
     {
       id: 'settings',
