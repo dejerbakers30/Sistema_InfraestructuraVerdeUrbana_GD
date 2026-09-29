@@ -159,13 +159,18 @@ copy .env.local.example .env.local
 
 ### 4. Iniciar Servicios
 
+**En Linux:**
 ```bash
-# Ejecutar script de inicio (abre Backend y Frontend en terminales separadas)
+./start_linux.sh
+```
+
+**En Windows:**
+```bash
 .\start_windows.bat
 ```
 
 Esto iniciará:
-- Backend API en http://localhost:8000
+- Backend API en http://localhost:8000 (Swagger: http://localhost:8000/docs)
 - Frontend en http://localhost:3000
 - Celery Worker (opcional)
 

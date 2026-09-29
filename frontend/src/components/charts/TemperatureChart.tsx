@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTheme } from '../ThemeProvider'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -26,6 +27,12 @@ ChartJS.register(
 )
 
 export default function TemperatureChart({ scenarioId }: { scenarioId: string | null }) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const textColor = isDark ? '#cbd5e1' : '#334155'
+  const tickColor = isDark ? '#94a3b8' : '#64748b'
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'
+
   const [chartData, setChartData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -65,7 +72,7 @@ export default function TemperatureChart({ scenarioId }: { scenarioId: string | 
         {
           label: 'Línea Base Ref. (°C)',
           data: curves['1'],
-          borderColor: 'rgba(239, 68, 68, 0.4)',
+          borderColor: 'rgba(239, 68, 68, 0.5)',
           borderDash: [5, 5],
           fill: false,
           tension: 0.4
@@ -88,6 +95,10 @@ export default function TemperatureChart({ scenarioId }: { scenarioId: string | 
     plugins: {
       legend: {
         position: 'top' as const,
+        labels: {
+          color: textColor,
+          font: { size: 11, weight: '600' as const }
+        }
       },
       title: {
         display: false,
@@ -98,14 +109,22 @@ export default function TemperatureChart({ scenarioId }: { scenarioId: string | 
         beginAtZero: false,
         title: {
           display: true,
-          text: 'Temperatura (°C)'
-        }
+          text: 'Temperatura (°C)',
+          color: textColor,
+          font: { size: 11, weight: '600' as const }
+        },
+        ticks: { color: tickColor },
+        grid: { color: gridColor }
       },
       x: {
         title: {
           display: true,
-          text: 'Tiempo'
-        }
+          text: 'Tiempo',
+          color: textColor,
+          font: { size: 11, weight: '600' as const }
+        },
+        ticks: { color: tickColor },
+        grid: { color: gridColor }
       }
     },
   }

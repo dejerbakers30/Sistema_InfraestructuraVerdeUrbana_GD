@@ -29,8 +29,8 @@ export default function MapContainer({ scenarioId }: { scenarioId: string | null
 
   if (loading) {
     return (
-      <div className="h-full bg-gray-200 rounded-lg flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="h-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
       </div>
     )
   }

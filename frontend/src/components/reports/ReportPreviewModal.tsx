@@ -303,9 +303,9 @@ export default function ReportPreviewModal({
                   <table className="w-full border-collapse border border-slate-300 dark:border-slate-700 text-left">
                     <thead>
                       <tr className="bg-emerald-800 text-white font-bold">
-                        <th className="border border-slate-300 p-2">Indicador Microclimático</th>
-                        <th className="border border-slate-300 p-2 text-center">Valor</th>
-                        <th className="border border-slate-300 p-2 text-center">Estado</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2">Indicador Microclimático</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-center">Valor</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-center">Estado</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -324,10 +324,10 @@ export default function ReportPreviewModal({
                   <table className="w-full border-collapse border border-slate-300 dark:border-slate-700 text-left">
                     <thead>
                       <tr className="bg-teal-800 text-white font-bold">
-                        <th className="border border-slate-300 p-2">Hora</th>
-                        <th className="border border-slate-300 p-2 text-center">Temperatura (°C)</th>
-                        <th className="border border-slate-300 p-2 text-center">Humedad (%)</th>
-                        <th className="border border-slate-300 p-2 text-center">PET Confort (°C)</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2">Hora</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-center">Temperatura (°C)</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-center">Humedad (%)</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-center">PET Confort (°C)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -347,11 +347,11 @@ export default function ReportPreviewModal({
                   <table className="w-full border-collapse border border-slate-300 dark:border-slate-700 text-left">
                     <thead>
                       <tr className="bg-emerald-900 text-white font-bold">
-                        <th className="border border-slate-300 p-2">Modelo ML</th>
-                        <th className="border border-slate-300 p-2 text-center">RMSE</th>
-                        <th className="border border-slate-300 p-2 text-center">MAE</th>
-                        <th className="border border-slate-300 p-2 text-center">R² Score</th>
-                        <th className="border border-slate-300 p-2 text-right">Estado</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2">Modelo ML</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-center">RMSE</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-center">MAE</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-center">R² Score</th>
+                        <th className="border border-slate-300 dark:border-slate-700 p-2 text-right">Estado</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -386,7 +386,7 @@ export default function ReportPreviewModal({
                     <p className="text-xs text-slate-500">Gemelo Digital de Infraestructura Verde Urbana</p>
                   </div>
                 </div>
-                <span className="text-xs bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded-full border border-blue-300">
+                <span className="text-xs bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold px-3 py-1 rounded-full border border-blue-300 dark:border-blue-700">
                   Microsoft Word Layout
                 </span>
               </div>
@@ -478,7 +478,7 @@ export default function ReportPreviewModal({
                     </thead>
                     <tbody>
                       {data.ml_models.map((m, i) => (
-                        <tr key={i} className={m.is_active ? 'bg-blue-50/60 font-bold' : ''}>
+                        <tr key={i} className={m.is_active ? 'bg-blue-50/60 dark:bg-blue-950/40 font-bold' : ''}>
                           <td className="p-2 border border-slate-300 dark:border-slate-700 font-medium">{m.name}</td>
                           <td className="p-2 border border-slate-300 dark:border-slate-700 text-center">{m.rmse.toFixed(4)}</td>
                           <td className="p-2 border border-slate-300 dark:border-slate-700 text-center">{m.mae.toFixed(4)}</td>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTheme } from '../ThemeProvider'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -22,6 +23,12 @@ ChartJS.register(
 )
 
 export default function WindChart({ scenarioId }: { scenarioId: string | null }) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const textColor = isDark ? '#cbd5e1' : '#334155'
+  const tickColor = isDark ? '#94a3b8' : '#64748b'
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'
+
   const [chartData, setChartData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -44,14 +51,14 @@ export default function WindChart({ scenarioId }: { scenarioId: string | null })
         {
           label: 'Velocidad del Viento (m/s)',
           data: windCurves[activeId] || windCurves['1'],
-          backgroundColor: 'rgba(99, 102, 241, 0.7)',
+          backgroundColor: isDark ? 'rgba(129, 140, 248, 0.7)' : 'rgba(99, 102, 241, 0.8)',
           borderColor: 'rgb(99, 102, 241)',
           borderWidth: 1,
           borderRadius: 4
         }
       ]
     })
-  }, [scenarioId])
+  }, [scenarioId, isDark])
 
   if (loading) {
     return (
@@ -63,7 +70,7 @@ export default function WindChart({ scenarioId }: { scenarioId: string | null })
 
   if (!chartData) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+      <div className="h-full flex items-center justify-center text-slate-400 text-sm">
         Selecciona un escenario para ver el gráfico de viento
       </div>
     )
@@ -75,6 +82,10 @@ export default function WindChart({ scenarioId }: { scenarioId: string | null })
     plugins: {
       legend: {
         position: 'top' as const,
+        labels: {
+          color: textColor,
+          font: { size: 11, weight: '600' as const }
+        }
       },
       title: {
         display: false,
@@ -85,14 +96,22 @@ export default function WindChart({ scenarioId }: { scenarioId: string | null })
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Velocidad (m/s)'
-        }
+          text: 'Velocidad (m/s)',
+          color: textColor,
+          font: { size: 11, weight: '600' as const }
+        },
+        ticks: { color: tickColor },
+        grid: { color: gridColor }
       },
       x: {
         title: {
           display: true,
-          text: 'Tiempo'
-        }
+          text: 'Tiempo',
+          color: textColor,
+          font: { size: 11, weight: '600' as const }
+        },
+        ticks: { color: tickColor },
+        grid: { color: gridColor }
       }
     },
   }

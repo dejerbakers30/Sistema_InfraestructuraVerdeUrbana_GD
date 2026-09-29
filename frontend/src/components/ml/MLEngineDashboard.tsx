@@ -2,34 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 
-interface ModelMetric {
-  id: string
-  model_type: string
-  name: string
-  hyperparameters: Record<string, any>
-  metrics: {
-    rmse: number
-    mae: number
-    r2: number
-    mse: number
-    mape: number
-  }
-  is_active: boolean
-}
-
-interface StatisticalTestsData {
-  friedman_statistic: number
-  friedman_p_value: number
-  friedman_significant: boolean
-  wilcoxon_results: Record<string, { statistic: number; p_value: number; significant: boolean }>
-  nemenyi_results: {
-    average_ranks: Record<string, number>
-    critical_difference: number
-    model_names: string[]
-  }
-  winning_model_id?: string
-  conclusion_text?: string
-}
+import ScientificValidationSuite, {
+  ModelMetric,
+  StatisticalTestsData
+} from './ScientificValidationSuite'
 
 export default function MLEngineDashboard({
   onTrainingStateChange
@@ -41,6 +17,7 @@ export default function MLEngineDashboard({
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>('')
   const [targetVariable, setTargetVariable] = useState<string>('temperature')
   const [isUploading, setIsUploading] = useState<boolean>(false)
+  const [isSeedingBenchmark, setIsSeedingBenchmark] = useState<boolean>(false)
 
   const [jobId, setJobId] = useState<string | null>(null)
   const [jobStatus, setJobStatus] = useState<string>('')
@@ -215,6 +192,30 @@ export default function MLEngineDashboard({
     }
   }
 
+  const handleSeedBenchmark = async () => {
+    setIsSeedingBenchmark(true)
+    try {
+      const res = await fetch(`${apiUrl}/ml/datasets/seed-benchmark`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      })
+      if (res.ok) {
+        const data = await res.json()
+        showToast('Dataset empírico real (1,000 registros) cargado con éxito.', 'success')
+        await fetchDatasets()
+        setSelectedDatasetId(data.id)
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        showToast(`No se pudo cargar el benchmark: ${errData.detail || 'Error'}`, 'error')
+      }
+    } catch (err: any) {
+      console.error(err)
+      showToast(`Error al cargar dataset real: ${err?.message || 'Servidor no disponible'}`, 'error')
+    } finally {
+      setIsSeedingBenchmark(false)
+    }
+  }
+
   const handleStartTraining = async () => {
     if (!selectedDatasetId) {
       showToast('Selecciona un dataset primero para iniciar el entrenamiento.', 'info')
@@ -300,16 +301,6 @@ export default function MLEngineDashboard({
   const activeModel = models.find(m => m.is_active)
   const winningModel = models.find(m => m.id === statsData?.winning_model_id) || models[0]
 
-  // Matriz de Correlaciones Ficticia Realista para Mapa de Calor
-  const heatmapFeatures = [
-    { name: 'Vegetación %', tempCorr: -0.84, color: 'bg-emerald-500/30 text-emerald-300' },
-    { name: 'Densidad Edificada %', tempCorr: 0.78, color: 'bg-rose-500/30 text-rose-300' },
-    { name: 'Radiación Solar (W/m²)', tempCorr: 0.89, color: 'bg-amber-500/30 text-amber-300' },
-    { name: 'Velocidad Viento (m/s)', tempCorr: -0.62, color: 'bg-cyan-500/30 text-cyan-300' },
-    { name: 'Humedad Relativa %', tempCorr: -0.55, color: 'bg-blue-500/30 text-blue-300' },
-    { name: 'Albedo Superficial', tempCorr: -0.41, color: 'bg-indigo-500/30 text-indigo-300' },
-  ]
-
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Toast Notification Banner */}
@@ -338,17 +329,17 @@ export default function MLEngineDashboard({
       )}
 
       {/* Top Banner Header */}
-      <div className="bg-gradient-to-r from-cyan-950 via-teal-900 to-slate-900 text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden border border-teal-800/40">
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-gradient-to-r from-teal-700 via-emerald-700 to-cyan-800 dark:from-cyan-950 dark:via-teal-900 dark:to-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden border border-teal-500/30 dark:border-teal-800/40">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 bg-cyan-400/15 dark:bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 w-full">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-teal-500/30">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-200 dark:text-teal-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-teal-400/30 dark:border-teal-500/30">
             <span>🤖</span> Motor de ML v2.0
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mb-3">
             Entrenamiento y Selección de Modelos ML (3 Tradicionales + 2 Híbridos)
           </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Entrena metamodelos sustitutos ultrarrápidos para predecir microclima en milisegundos en el Dashboard. Compara los 3 modelos tradicionales (<strong className="text-teal-300 font-bold">XGBoost</strong>, <strong className="text-teal-300 font-bold">Random Forest</strong>, <strong className="text-teal-300 font-bold">SVR</strong>) frente a los 2 híbridos (<strong className="text-amber-300 font-bold">Stacking Ensemble</strong> y <strong className="text-purple-300 font-bold">CNN-LSTM Neural Net</strong>) con validación cruzada 5-Fold.
+          <p className="text-teal-50 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+            Entrena metamodelos sustitutos ultrarrápidos para predecir microclima en milisegundos en el Dashboard. Compara los 3 modelos tradicionales (<strong className="text-teal-200 dark:text-teal-300 font-bold">XGBoost</strong>, <strong className="text-teal-200 dark:text-teal-300 font-bold">Random Forest</strong>, <strong className="text-teal-200 dark:text-teal-300 font-bold">SVR</strong>) frente a los 2 híbridos (<strong className="text-amber-200 dark:text-amber-300 font-bold">Stacking Ensemble</strong> y <strong className="text-purple-200 dark:text-purple-300 font-bold">CNN-LSTM Neural Net</strong>) con validación cruzada 5-Fold.
           </p>
         </div>
       </div>
@@ -391,9 +382,29 @@ export default function MLEngineDashboard({
                   <span>Subiendo dataset...</span>
                 </>
               ) : (
-                <span>Subir Dataset</span>
+                <span>Subir Dataset Personalizado</span>
               )}
             </button>
+
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleSeedBenchmark}
+                disabled={isSeedingBenchmark || isTraining}
+                className="w-full py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all flex items-center justify-center gap-2 border border-emerald-500/30 shadow-sm"
+              >
+                {isSeedingBenchmark ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                    <span>Cargando Benchmark Real...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔬 Cargar Dataset Real de Referencia (UTHECA - 1,000 filas)</span>
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </div>
 
@@ -467,13 +478,13 @@ export default function MLEngineDashboard({
 
       {/* 🏆 Panel de Selección del Mejor Modelo (ÚNICO CONTROL DE ACTIVACIÓN) */}
       {models.length > 0 && (
-        <div className="p-6 bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border border-emerald-500/40 rounded-3xl shadow-2xl space-y-4 relative overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-emerald-500/20 pb-4">
+        <div className="p-6 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-slate-50 dark:from-emerald-950/60 dark:via-slate-900 dark:to-teal-950/60 border border-emerald-300 dark:border-emerald-500/40 rounded-3xl shadow-xl space-y-4 relative overflow-hidden transition-colors">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-emerald-200 dark:border-emerald-500/20 pb-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2 border border-emerald-500/30">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2 border border-emerald-500/30">
                 <span>🏆</span> Modelo Recomendado Estadísticamente
               </div>
-              <h2 className="text-2xl font-black text-white flex items-center gap-3">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                 <span>{winningModel?.name}</span>
                 {getModelTypeBadge(winningModel?.model_type)}
               </h2>
@@ -481,15 +492,15 @@ export default function MLEngineDashboard({
 
             <div className="flex items-center gap-3">
               {winningModel?.is_active ? (
-                <span className="px-4 py-2 rounded-2xl bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/40 shadow-inner flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="px-4 py-2 rounded-2xl bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold text-xs border border-emerald-500/40 shadow-inner flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                   Modelo Activo para el Dashboard
                 </span>
               ) : (
                 <button
                   type="button"
                   onClick={() => handleActivateModel(winningModel?.id)}
-                  className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition-all shadow-lg shadow-emerald-500/25 hover:scale-105 active:scale-95"
+                  className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition-all shadow-lg shadow-emerald-600/25 hover:scale-105 active:scale-95"
                 >
                   ⭐ Activar este Modelo Recomendado
                 </button>
@@ -497,21 +508,21 @@ export default function MLEngineDashboard({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-300">
-            <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800">
-              <span className="text-slate-400 block font-semibold mb-1">Error Cuadrático (RMSE)</span>
-              <span className="text-lg font-mono font-bold text-emerald-400">{winningModel?.metrics?.rmse?.toFixed(4)}</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="p-3.5 bg-white dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-slate-600 dark:text-slate-400 block font-semibold mb-1">Error Cuadrático (RMSE)</span>
+              <span className="text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">{winningModel?.metrics?.rmse?.toFixed(4)}</span>
             </div>
-            <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800">
-              <span className="text-slate-400 block font-semibold mb-1">Precisión R² Score</span>
-              <span className="text-lg font-mono font-bold text-teal-400">{(winningModel?.metrics?.r2 * 100).toFixed(2)}%</span>
+            <div className="p-3.5 bg-white dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-slate-600 dark:text-slate-400 block font-semibold mb-1">Precisión R² Score</span>
+              <span className="text-lg font-mono font-bold text-teal-600 dark:text-teal-400">{(winningModel?.metrics?.r2 * 100).toFixed(2)}%</span>
             </div>
-            <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800">
-              <span className="text-slate-400 block font-semibold mb-1">Cambiar Modelo Oficial Manualmente</span>
+            <div className="p-3.5 bg-white dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-slate-600 dark:text-slate-400 block font-semibold mb-1">Cambiar Modelo Oficial Manualmente</span>
               <select
                 value={activeModel?.id || ''}
                 onChange={e => e.target.value && handleActivateModel(e.target.value)}
-                className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full mt-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
               >
                 {models.map(m => (
                   <option key={m.id} value={m.id}>
@@ -566,122 +577,14 @@ export default function MLEngineDashboard({
         </div>
       )}
 
-      {/* Visual Charts: Bar Comparison & Correlation Heatmap */}
+      {/* 🔬 Suite Completa de Validación Científica y Gráficas para Publicación */}
       {models.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Chart 1: Visual Bar Chart for RMSE & R2 Comparison */}
-          <div className="p-6 bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg space-y-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Gráfico Comparativo de Error (RMSE de los 5 Modelos)
-            </h3>
-
-            <div className="space-y-3 pt-2">
-              {models.map(m => {
-                const maxRmse = Math.max(...models.map(x => x.metrics?.rmse || 1.0))
-                const pct = Math.round(((m.metrics?.rmse || 0) / (maxRmse || 1)) * 100)
-                return (
-                  <div key={m.id} className="space-y-1">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-slate-800 dark:text-slate-200">{m.name}</span>
-                      <span className="font-mono text-teal-400">{m.metrics?.rmse?.toFixed(4)} RMSE</span>
-                    </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800">
-                      <div
-                        className={`h-full transition-all duration-700 rounded-full ${
-                          m.is_active
-                            ? 'bg-gradient-to-r from-emerald-400 to-teal-500 shadow-md shadow-emerald-500/50'
-                            : m.model_type === 'stacking'
-                            ? 'bg-gradient-to-r from-amber-500 to-orange-400'
-                            : m.model_type === 'cnn_lstm'
-                            ? 'bg-gradient-to-r from-purple-500 to-indigo-400'
-                            : 'bg-gradient-to-r from-cyan-500 to-teal-400'
-                        }`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Chart 2: Mapa de Calor de Correlación de Variables */}
-          <div className="p-6 bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg space-y-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-              </svg>
-              Mapa de Calor de Correlación Microclimática
-            </h3>
-
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
-              {heatmapFeatures.map(item => (
-                <div key={item.name} className={`p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 ${item.color} backdrop-blur-sm flex flex-col justify-between`}>
-                  <span className="text-xs font-bold block">{item.name}</span>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-[10px] uppercase font-semibold text-slate-400">Correlación</span>
-                    <span className="text-sm font-mono font-extrabold">{item.tempCorr > 0 ? `+${item.tempCorr}` : item.tempCorr}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Statistical Robustness Panel */}
-      {statsData && (
-        <div className="p-6 bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Pruebas Estadísticas de Robustez (Friedman, Wilcoxon, Nemenyi CD)
-            </h3>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20">
-              Significancia α = 0.05
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl">
-              <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">Test Global de Friedman</span>
-              <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">F = {statsData.friedman_statistic?.toFixed(4)}</p>
-              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">p-valor: {statsData.friedman_p_value?.toExponential(3)}</p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2">
-                {statsData.friedman_significant ? '✓ Diferencia significativa detectada' : 'No se hallaron diferencias significativas'}
-              </p>
-            </div>
-
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl">
-              <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">Diferencia Crítica Nemenyi (CD)</span>
-              <p className="text-xl font-bold text-teal-600 dark:text-teal-400 mt-1">CD = {statsData.nemenyi_results?.critical_difference?.toFixed(4)}</p>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Margen de separación entre rangos de modelos</p>
-            </div>
-
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl">
-              <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">Rangos Promedio de Error</span>
-              <div className="mt-2 space-y-1">
-                {Object.entries(statsData.nemenyi_results?.average_ranks || {}).map(([name, rank]) => (
-                  <div key={name} className="flex justify-between text-xs font-mono">
-                    <span className="text-slate-700 dark:text-slate-300">{name}:</span>
-                    <span className="text-teal-600 dark:text-teal-400 font-bold">{rank}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Conclusion Text Box */}
-          <div className="p-4 bg-indigo-50/50 dark:bg-slate-950/80 border border-indigo-200 dark:border-indigo-500/20 rounded-xl">
-            <h4 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider mb-1">Conclusión Científica Automatizada</h4>
-            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{statsData.conclusion_text}</p>
-          </div>
-        </div>
+        <ScientificValidationSuite
+          models={models}
+          statsData={statsData}
+          targetVariable={targetVariable}
+          onActivateModel={handleActivateModel}
+        />
       )}
     </div>
   )

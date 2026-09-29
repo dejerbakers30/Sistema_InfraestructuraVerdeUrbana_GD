@@ -185,17 +185,17 @@ export default function ReportsDashboard() {
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Top Banner Header */}
-      <div className="bg-gradient-to-r from-teal-900 via-emerald-900 to-slate-900 text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden border border-teal-800/40">
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-gradient-to-r from-teal-700 via-emerald-700 to-cyan-800 dark:from-teal-900 dark:via-emerald-900 dark:to-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden border border-teal-500/30 dark:border-teal-800/40">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 bg-teal-400/15 dark:bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 w-full">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-teal-500/30">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-200 dark:text-teal-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-teal-400/30 dark:border-teal-500/30">
             <span>📄</span> Módulo de Reportes & Exportación
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mb-3">
             Generación y Vista Previa de Reportes
           </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Genera e inspecciona en <strong className="text-teal-300 font-bold">vista previa</strong> los datos descriptivos y listados de infraestructura verde urbana antes de descargar los documentos en formatos <strong className="text-white font-bold">PDF</strong>, <strong className="text-white font-bold">Excel (.xlsx)</strong> o <strong className="text-white font-bold">Word (.docx)</strong>.
+          <p className="text-teal-50 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+            Genera e inspecciona en <strong className="text-teal-200 dark:text-teal-300 font-bold">vista previa</strong> los datos descriptivos y listados de infraestructura verde urbana antes de descargar los documentos en formatos <strong className="text-white font-bold">PDF</strong>, <strong className="text-white font-bold">Excel (.xlsx)</strong> o <strong className="text-white font-bold">Word (.docx)</strong>.
           </p>
         </div>
       </div>

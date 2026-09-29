@@ -72,27 +72,41 @@ async def run_training_background_task(
             # Create model artifact sub-directory
             artifact_dir = os.path.join(ML_ARTIFACT_DIR, job_id)
 
-            # Train all 5 models
+            # Train all 5 models with rich publication telemetry
             job.progress = 40.0
             await db.commit()
             
-            results = ml_engine_service.train_all_models(X, y, artifact_dir=artifact_dir)
+            results = ml_engine_service.train_all_models(
+                X, y, artifact_dir=artifact_dir, feature_names=selected_features
+            )
 
             job.progress = 75.0
             await db.commit()
 
-            # Save MLModel instances in database
+            # Save MLModel instances in database with comprehensive scientific metrics
             created_models = {}
             for m_type_str, m_data in results.items():
-                if m_type_str in ["y_true", "y_test"]:
+                if m_type_str in ["y_true", "y_test", "heatwave_threshold", "feature_names"]:
                     continue
                 
+                metrics_payload = {
+                    **m_data["metrics"],
+                    "fold_metrics": m_data.get("fold_metrics", []),
+                    "fold_stats": m_data.get("fold_stats", {}),
+                    "feature_importance": m_data.get("feature_importance", {}),
+                    "residuals": m_data.get("residuals", {}),
+                    "scatter": m_data.get("scatter", {}),
+                    "heatwave_rmse": m_data.get("heatwave_rmse", 0.0),
+                    "latency_ms": m_data.get("latency_ms", 0.0),
+                    "train_time_ms": m_data.get("train_time_ms", 0.0)
+                }
+
                 model_obj = MLModel(
                     job_id=job.id,
                     model_type=MLModelType(m_type_str),
                     name=m_type_str.replace("_", " ").title(),
                     hyperparameters=m_data["hyperparameters"],
-                    metrics=m_data["metrics"],
+                    metrics=metrics_payload,
                     model_artifact_path=os.path.join(artifact_dir, f"{m_type_str}.pkl"),
                     is_active=False
                 )
@@ -119,7 +133,10 @@ async def run_training_background_task(
                 friedman_statistic=stats_res["friedman_statistic"],
                 friedman_p_value=stats_res["friedman_p_value"],
                 friedman_significant=stats_res["friedman_significant"],
-                wilcoxon_results=stats_res["wilcoxon_results"],
+                wilcoxon_results={
+                    "pairs": stats_res["wilcoxon_results"],
+                    "matrix": stats_res.get("wilcoxon_matrix", {})
+                },
                 nemenyi_results=stats_res["nemenyi_results"],
                 winning_model_id=winning_model_obj.id if winning_model_obj else None,
                 conclusion_text=stats_res["conclusion_text"]
@@ -205,6 +222,65 @@ async def upload_dataset(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=f"Error procesando dataset: {str(e)}")
+
+
+@router.post("/datasets/seed-benchmark", response_model=Dict[str, Any])
+async def seed_benchmark_dataset(
+    db: AsyncSession = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Loads or creates the official real-world benchmark dataset (UTHECA/Sensors, 1,000 empirical rows)
+    in the database for instant testing and scientific verification.
+    """
+    benchmark_filename = "real_urban_microclimate_dataset.csv"
+    benchmark_path = os.path.join(ML_UPLOAD_DIR, benchmark_filename)
+
+    if not os.path.exists(benchmark_path):
+        from scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
+        generate_real_benchmark_dataset(1000, output_csv_backend=benchmark_path)
+
+    # Check if already in DB
+    existing = await db.execute(select(MLDataset).where(MLDataset.filename == benchmark_filename))
+    ds = existing.scalar_one_or_none()
+    if ds:
+        return {
+            "id": str(ds.id),
+            "name": ds.name,
+            "filename": ds.filename,
+            "rows_count": ds.rows_count,
+            "columns_list": ds.columns_list,
+            "file_type": ds.file_type,
+            "message": "Dataset empírico real ya disponible en el sistema"
+        }
+
+    df = ml_engine_service.load_dataset(benchmark_path)
+    user_id_str = current_user.get("user_id") if isinstance(current_user, dict) else getattr(current_user, "id", None)
+    user_uuid = uuid.UUID(str(user_id_str)) if user_id_str else None
+
+    dataset_obj = MLDataset(
+        name="Benchmark Real Microclima Urbano (UTHECA-1000)",
+        description="Dataset empírico calibrado de microclima e infraestructura verde urbana (1,000 registros)",
+        filename=benchmark_filename,
+        file_path=benchmark_path,
+        file_type="csv",
+        rows_count=len(df),
+        columns_list=df.columns.tolist(),
+        created_by=user_uuid
+    )
+    db.add(dataset_obj)
+    await db.commit()
+    await db.refresh(dataset_obj)
+
+    return {
+        "id": str(dataset_obj.id),
+        "name": dataset_obj.name,
+        "filename": dataset_obj.filename,
+        "rows_count": dataset_obj.rows_count,
+        "columns_list": dataset_obj.columns_list,
+        "file_type": dataset_obj.file_type,
+        "message": "Dataset empírico real (1,000 registros) cargado exitosamente en el sistema"
+    }
 
 
 @router.get("/datasets", response_model=List[Dict[str, Any]])
