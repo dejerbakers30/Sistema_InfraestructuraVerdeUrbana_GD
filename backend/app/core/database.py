@@ -68,15 +68,20 @@ async def init_db() -> None:
         
         logger.info("Database connection established successfully")
         
-        # Create tables (only in development)
-        if settings.ENVIRONMENT == "development":
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-                try:
-                    await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;"))
-                except Exception as alter_err:
-                    logger.warning(f"Note on ALTER TABLE users: {alter_err}")
-            logger.info("Database tables created")
+        # Ensure PostGIS extension and create tables
+        async with engine.begin() as conn:
+            try:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+            except Exception as ext_err:
+                logger.warning(f"Note on CREATE EXTENSION postgis: {ext_err}")
+                
+            await conn.run_sync(Base.metadata.create_all)
+            try:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;"))
+            except Exception as alter_err:
+                logger.warning(f"Note on ALTER TABLE users: {alter_err}")
+                
+        logger.info("Database tables initialized successfully")
         
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")

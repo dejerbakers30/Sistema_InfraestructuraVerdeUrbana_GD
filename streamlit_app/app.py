@@ -325,18 +325,31 @@ if crisp_phase == "1. Comprensión & EDA":
     """, unsafe_allow_html=True)
     
     st.subheader("1.3. Distribución Espacial de Puntos y Temperatura en Trujillo")
-    fig_geo = px.scatter_mapbox(
-        df_raw,
-        lat="latitude",
-        lon="longitude",
-        color="temperature",
-        size="building_density",
-        hover_data=["vegetation_pct", "pet", "wind_speed"],
-        color_continuous_scale="Turbo",
-        zoom=12,
-        title="Distribución Geoespacial de Monitoreo Térmico Urbano en Trujillo (Perú)",
-        mapbox_style="carto-positron"
-    )
+    if hasattr(px, "scatter_map"):
+        fig_geo = px.scatter_map(
+            df_raw,
+            lat="latitude",
+            lon="longitude",
+            color="temperature",
+            size="building_density",
+            hover_data=["vegetation_pct", "pet", "wind_speed"],
+            color_continuous_scale="Turbo",
+            zoom=12,
+            title="Distribución Geoespacial de Monitoreo Térmico Urbano en Trujillo (Perú)"
+        )
+    else:
+        fig_geo = px.scatter_mapbox(
+            df_raw,
+            lat="latitude",
+            lon="longitude",
+            color="temperature",
+            size="building_density",
+            hover_data=["vegetation_pct", "pet", "wind_speed"],
+            color_continuous_scale="Turbo",
+            zoom=12,
+            title="Distribución Geoespacial de Monitoreo Térmico Urbano en Trujillo (Perú)",
+            mapbox_style="carto-positron"
+        )
     fig_geo.update_layout(height=480, margin=dict(l=10, r=10, t=40, b=10))
     st.plotly_chart(fig_geo, use_container_width=True)
 

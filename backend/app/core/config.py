@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Security
-    SECRET_KEY: str = Field(..., description="Secret key for JWT token generation")
+    SECRET_KEY: str = Field(
+        default="gemelo-digital-super-secret-jwt-key-2026-production-ready",
+        description="Secret key for JWT token generation"
+    )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7

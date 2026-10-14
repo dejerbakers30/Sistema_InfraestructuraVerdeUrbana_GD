@@ -1,0 +1,55 @@
+# ==============================================================================
+# Blueprint de Despliegue en Render (Plan Gratuito)
+# Gemelo Digital de Infraestructura Verde Urbana
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Backend API (FastAPI)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: gemelo-digital-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: ohio
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 120
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: 7
+      - key: USE_TIMESCALEDB
+        value: "false"
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+  # ----------------------------------------------------------------------------
+  # 2. Frontend Web (Next.js)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: gemelo-digital-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    region: ohio
+    dockerBuildArgs:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://gemelo-digital-backend.onrender.com/api/v1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: NEXT_PUBLIC_API_URL
+        value: https://gemelo-digital-backend.onrender.com/api/v1
