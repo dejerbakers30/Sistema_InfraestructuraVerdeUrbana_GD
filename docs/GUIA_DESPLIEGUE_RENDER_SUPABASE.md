@@ -142,7 +142,7 @@ El script automáticamente:
    * **Branch:** `main`
    * **Runtime:** `Docker`
    * **Dockerfile Path:** `./frontend/Dockerfile`
-   * **Docker Build Context:** `./frontend`
+   * **Docker Build Context:** `.`
    * **Instance Type:** `Free`
 4. En **Docker Build Arguments** (o Environment Variables), añade:
 

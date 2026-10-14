@@ -40,7 +40,7 @@ services:
     name: gemelo-digital-frontend
     runtime: docker
     dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
+    dockerContext: .
     plan: free
     region: ohio
     dockerBuildArgs:
