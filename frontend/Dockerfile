@@ -16,7 +16,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
-RUN npm run build
+RUN mkdir -p public && npm run build
 
 # Stage 3: Production Runner (Ultra-lightweight Standalone)
 FROM node:20-alpine AS runner
