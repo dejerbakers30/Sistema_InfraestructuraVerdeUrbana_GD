@@ -70,10 +70,13 @@ class LangflowService:
             except Exception:
                 pass
             err_text = raw_err.decode("utf-8", errors="ignore")
-            logger.error(f"Langflow HTTP error {e.code} on {endpoint}: {err_text}")
+            logger.warning(f"Langflow HTTP {e.code} on {endpoint}: {err_text}")
             raise RuntimeError(f"Langflow returned HTTP {e.code}: {err_text}")
         except Exception as e:
-            logger.error(f"Langflow connection error on {endpoint}: {str(e)}")
+            if "/health" in endpoint:
+                logger.debug(f"Langflow health probe: Langflow not reachable ({str(e)})")
+            else:
+                logger.info(f"Langflow connection notice on {endpoint}: {str(e)}")
             raise
 
     async def get_status(self) -> Dict[str, Any]:

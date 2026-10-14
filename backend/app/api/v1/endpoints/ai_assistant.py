@@ -19,6 +19,7 @@ class LangflowChatRequest(BaseModel):
     context: Optional[Dict[str, Any]] = Field(None, description="Current digital twin context and KPIs")
     flow_id: Optional[str] = Field(None, description="Specific flow ID to run, or defaults to configured agent")
     api_key: Optional[str] = Field(None, description="Optional custom Langflow API key")
+    groq_api_key: Optional[str] = Field(None, description="Optional custom Groq API key for fallback")
 
 
 class MessageItem(BaseModel):
@@ -114,6 +115,7 @@ async def predict_case_recommendations(request: PredictRequest):
 async def chat_with_langflow_agent(request: LangflowChatRequest):
     """
     Chat with the specialized Langflow Urban Green Infrastructure Agent.
+    Automatically falls back to Groq LLM if Langflow is offline or running on another host.
     """
     try:
         result = await langflow_service.run_agent(
@@ -125,10 +127,24 @@ async def chat_with_langflow_agent(request: LangflowChatRequest):
         )
         return result
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error comunicando con el Agente de Langflow: {str(e)}"
-        )
+        logger.info(f"Langflow unavailable ({e}). Automatically switching to Groq Cloud assistant...")
+        try:
+            fallback_res = await groq_service.chat_completion(
+                messages=[{"role": "user", "content": request.message}],
+                context=request.context,
+                client_api_key=request.groq_api_key,
+            )
+            return {
+                "content": fallback_res.get("content", ""),
+                "model": f"{fallback_res.get('model', settings.GROQ_MODEL)}",
+                "provider": "Groq Cloud (Respaldo Inteligente)",
+                "flow_name": "Agente Gemelo Digital (Groq Cloud)"
+            }
+        except Exception as groq_err:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error en Langflow ({str(e)}) y en Groq ({str(groq_err)})"
+            )
 
 
 @router.get("/langflow/status")

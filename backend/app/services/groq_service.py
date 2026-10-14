@@ -36,7 +36,12 @@ class GroqService:
         self.default_model = settings.GROQ_MODEL or "llama-3.3-70b-versatile"
 
     def _get_api_key(self, client_api_key: Optional[str] = None) -> Optional[str]:
-        return client_api_key or settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY")
+        raw = client_api_key or settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY")
+        if raw:
+            cleaned = str(raw).strip().strip('"').strip("'")
+            if cleaned and cleaned not in ("None", "null", "undefined"):
+                return cleaned
+        return None
 
     async def chat_completion(
         self,

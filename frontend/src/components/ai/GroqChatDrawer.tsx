@@ -48,7 +48,7 @@ export default function GroqChatDrawer({
   isOpen?: boolean
   onClose?: () => void
 }) {
-  const [provider, setProvider] = useState<'langflow' | 'groq'>('langflow')
+  const [provider, setProvider] = useState<'langflow' | 'groq'>('groq')
   const [langflowStatus, setLangflowStatus] = useState<{
     online: boolean
     flowName?: string
@@ -60,10 +60,10 @@ export default function GroqChatDrawer({
       id: 'welcome',
       role: 'assistant',
       content:
-        '👋 Hola, soy el **Agente Inteligente del Gemelo Digital de Infraestructura Verde Urbana**.\n\nEstoy enlazado con la base de conocimiento y los módulos de simulación **ENVI-met 3D**, confort térmico **PET**, selección de especies vegetales y mitigación de islas de calor urbanas (ICU).\n\n¿Qué análisis o métricas del gemelo digital deseas consultar hoy?',
+        '👋 Hola, soy el **Asistente Experto en Gemelos Digitales de Infraestructura Verde Urbana**.\n\nEstoy enlazado con la base de conocimiento y los módulos de simulación **ENVI-met 3D**, confort térmico **PET**, selección de especies vegetales y mitigación de islas de calor urbanas (ICU).\n\n¿Qué análisis o métricas del gemelo digital deseas consultar hoy?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      model: 'Agente Gemelo Digital Urbano',
-      provider: 'Langflow',
+      model: 'Llama 3.3 70B Versatile',
+      provider: 'Groq Cloud',
     },
   ])
   const [inputMessage, setInputMessage] = useState('')
@@ -83,11 +83,17 @@ export default function GroqChatDrawer({
         })
         if (res.ok) {
           const data = await res.json()
+          const isOnline = data.status === 'connected'
           setLangflowStatus({
-            online: data.status === 'connected',
+            online: isOnline,
             flowName: data.flow_name || 'Agente Gemelo Digital Urbano',
             checked: true,
           })
+          if (isOnline) {
+            setProvider('langflow')
+          } else {
+            setProvider('groq')
+          }
           return
         }
       } catch {
@@ -102,6 +108,7 @@ export default function GroqChatDrawer({
               flowName: 'Agente Gemelo Digital Urbano',
               checked: true,
             })
+            setProvider('langflow')
             return
           }
         } catch {
@@ -109,6 +116,7 @@ export default function GroqChatDrawer({
         }
       }
       setLangflowStatus({ online: false, checked: true })
+      setProvider('groq')
     }
 
     checkLangflow()
@@ -158,10 +166,13 @@ export default function GroqChatDrawer({
       kpis: { avg_pet: 28.5, green_area: 15.3, runoff: 0.35, temp_reduction: 2.4 },
     }
 
+    const storedKey = typeof window !== 'undefined' ? localStorage.getItem('groq_api_key') : null
+
     try {
       if (provider === 'langflow') {
         let agentContent = ''
         let agentModel = 'Agente Gemelo Digital Urbano (Langflow)'
+        let responseProvider = 'Langflow'
 
         // Method A: Via Backend FastAPI
         try {
@@ -171,6 +182,7 @@ export default function GroqChatDrawer({
             body: JSON.stringify({
               message: text.trim(),
               context: digitalTwinContext,
+              groq_api_key: storedKey || undefined,
             }),
             signal: AbortSignal.timeout(45000),
           })
@@ -178,6 +190,7 @@ export default function GroqChatDrawer({
             const data = await res.json()
             agentContent = data.content
             if (data.flow_name) agentModel = data.flow_name
+            if (data.provider) responseProvider = data.provider
           }
         } catch {
           // fallback to Direct Langflow Execution
@@ -223,15 +236,14 @@ export default function GroqChatDrawer({
             content: agentContent,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             model: agentModel,
-            provider: 'Langflow',
+            provider: responseProvider,
           }
           setMessages((prev) => [...prev, botMsg])
         } else {
-          throw new Error('No se pudo obtener respuesta del agente Langflow')
+          throw new Error('No se pudo obtener respuesta del agente Langflow ni del respaldo')
         }
       } else {
         // Groq Provider
-        const storedKey = typeof window !== 'undefined' ? localStorage.getItem('groq_api_key') : null
         const res = await fetch(`${getApiUrl()}/ai/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -250,21 +262,23 @@ export default function GroqChatDrawer({
             content: data.content,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             model: data.model || 'llama-3.3-70b-versatile',
-            provider: 'Groq Cloud',
+            provider: data.provider || 'Groq Cloud',
           }
           setMessages((prev) => [...prev, botMsg])
         } else {
-          throw new Error('Error al consultar Groq')
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.detail || 'Error al consultar Groq')
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      const errMsg = err?.message || 'Error de conexión'
       const botMsg: ChatMessage = {
         id: String(Date.now() + 1),
         role: 'assistant',
         content:
           provider === 'langflow'
-            ? '⚠️ No fue posible comunicar con el Agente de Langflow en http://localhost:7860/. Verifica que el contenedor Langflow esté activo y el flujo sincronizado.'
-            : '⚠️ No fue posible conectar con el servicio Groq de IA. Verifica tu API Key o inténtalo nuevamente.',
+            ? `⚠️ No fue posible comunicar con el Agente de Langflow (${errMsg}). Si estás en la nube (Render), selecciona la pestaña 'Groq' arriba o inicia tu Langflow local.`
+            : `⚠️ No fue posible conectar con el servicio Groq de IA (${errMsg}). Verifica tu API Key o inténtalo nuevamente.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         provider: provider === 'langflow' ? 'Langflow' : 'Groq',
       }
