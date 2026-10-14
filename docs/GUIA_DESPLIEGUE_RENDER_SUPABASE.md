@@ -110,7 +110,7 @@ El script automáticamente:
    * **Root Directory:** *(dejar en blanco)*
    * **Runtime:** `Docker`
    * **Dockerfile Path:** `./backend/Dockerfile`
-   * **Docker Build Context:** `./backend`
+   * **Docker Build Context:** `.`
    * **Instance Type:** `Free`
 6. En la sección **Environment Variables**, añade:
 

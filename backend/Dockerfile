@@ -19,11 +19,11 @@ RUN pip install --upgrade pip && \
     pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 # Install remaining Python dependencies
-COPY requirements.txt /app/
+COPY backend/requirements.txt /app/
 RUN pip install -r requirements.txt
 
 # Copy application code
-COPY . /app
+COPY backend/ /app
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/uploads /app/temp/reports

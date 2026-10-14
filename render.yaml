@@ -11,7 +11,7 @@ services:
     name: gemelo-digital-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerContext: .
     plan: free
     region: ohio
     healthCheckPath: /health
