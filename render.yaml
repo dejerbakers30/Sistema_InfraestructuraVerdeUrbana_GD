@@ -11,7 +11,7 @@ services:
     name: gemelo-digital-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: .
+    dockerContext: ./backend
     plan: free
     region: ohio
     healthCheckPath: /health
@@ -31,7 +31,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: CORS_ORIGINS
-        sync: false
+        value: "https://sistema-infraestructuraverdeurbana-gd-1.onrender.com,https://sistema-infraestructuraverdeurbana-gd.onrender.com,http://localhost:3000"
 
   # ----------------------------------------------------------------------------
   # 2. Frontend Web (Next.js)
@@ -40,16 +40,16 @@ services:
     name: gemelo-digital-frontend
     runtime: docker
     dockerfilePath: ./frontend/Dockerfile
-    dockerContext: .
+    dockerContext: ./frontend
     plan: free
     region: ohio
     dockerBuildArgs:
       - key: NEXT_PUBLIC_API_URL
-        value: https://gemelo-digital-backend.onrender.com/api/v1
+        value: https://sistema-infraestructuraverdeurbana-gd.onrender.com/api/v1
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
       - key: NEXT_PUBLIC_API_URL
-        value: https://gemelo-digital-backend.onrender.com/api/v1
+        value: https://sistema-infraestructuraverdeurbana-gd.onrender.com/api/v1

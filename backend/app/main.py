@@ -55,9 +55,16 @@ app = FastAPI(
 )
 
 # Configure CORS
+cors_origins = list(settings.CORS_ORIGINS)
+if "https://sistema-infraestructuraverdeurbana-gd-1.onrender.com" not in cors_origins:
+    cors_origins.append("https://sistema-infraestructuraverdeurbana-gd-1.onrender.com")
+if "https://sistema-infraestructuraverdeurbana-gd.onrender.com" not in cors_origins:
+    cors_origins.append("https://sistema-infraestructuraverdeurbana-gd.onrender.com")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
+    allow_origin_regex=r"https://.*\.onrender\.com|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
