@@ -3,7 +3,7 @@ Configuration management using Pydantic Settings.
 Environment variables are loaded from .env file.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 from functools import lru_cache
@@ -102,7 +102,7 @@ class Settings(BaseSettings):
     ]
     
     # CORS
-    CORS_ORIGINS: List[str] = Field(
+    CORS_ORIGINS: Union[List[str], str] = Field(
         default=[
             "http://localhost:3000",
             "http://localhost:8000",
@@ -114,12 +114,23 @@ class Settings(BaseSettings):
         description="Allowed CORS origins"
     )
     
-    @field_validator("CORS_ORIGINS", mode="before")
+    @field_validator("CORS_ORIGINS", mode="after")
     @classmethod
-    def parse_cors_origins(cls, v):
+    def parse_cors_origins(cls, v) -> List[str]:
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if item]
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        elif isinstance(v, list):
+            return [str(item).strip() for item in v if item]
+        return ["*"]
     
     # Logging
     LOG_LEVEL: str = Field(default="INFO", description="Logging level")
