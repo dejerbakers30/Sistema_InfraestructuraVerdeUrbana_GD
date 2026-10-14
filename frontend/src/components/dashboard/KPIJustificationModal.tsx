@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { getApiUrl } from '@/utils/api'
 import { createPortal } from 'react-dom'
 import {
   X,
@@ -66,7 +67,7 @@ export default function KPIJustificationModal({
     setLoading(true)
     try {
       const storedKey = typeof window !== 'undefined' ? localStorage.getItem('groq_api_key') : null
-      const res = await fetch('http://localhost:8000/api/v1/ai/justify', {
+      const res = await fetch(`${getApiUrl()}/ai/justify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,7 +102,7 @@ export default function KPIJustificationModal({
     setAskingGroq(true)
     try {
       const storedKey = typeof window !== 'undefined' ? localStorage.getItem('groq_api_key') : null
-      const res = await fetch('http://localhost:8000/api/v1/ai/chat', {
+      const res = await fetch(`${getApiUrl()}/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

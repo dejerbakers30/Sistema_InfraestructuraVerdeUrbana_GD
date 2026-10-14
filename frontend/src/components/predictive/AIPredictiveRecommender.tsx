@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { getApiUrl } from '@/utils/api'
 import {
   Sparkles,
   AlertTriangle,
@@ -63,7 +64,7 @@ export default function AIPredictiveRecommender() {
     setLoading(true)
     try {
       const storedKey = typeof window !== 'undefined' ? localStorage.getItem('groq_api_key') : null
-      const res = await fetch('http://localhost:8000/api/v1/ai/predict-recommend', {
+      const res = await fetch(`${getApiUrl()}/ai/predict-recommend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

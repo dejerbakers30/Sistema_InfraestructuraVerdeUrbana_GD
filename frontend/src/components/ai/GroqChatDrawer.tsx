@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { getApiUrl } from '@/utils/api'
 import {
   MessageSquare,
   Send,
@@ -77,7 +78,7 @@ export default function GroqChatDrawer({
     async function checkLangflow() {
       try {
         // Try backend langflow status endpoint first
-        const res = await fetch('http://localhost:8000/api/v1/ai/langflow/status', {
+        const res = await fetch(`${getApiUrl()}/ai/langflow/status`, {
           signal: AbortSignal.timeout(3000),
         })
         if (res.ok) {
@@ -164,7 +165,7 @@ export default function GroqChatDrawer({
 
         // Method A: Via Backend FastAPI
         try {
-          const res = await fetch('http://localhost:8000/api/v1/ai/langflow/chat', {
+          const res = await fetch(`${getApiUrl()}/ai/langflow/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -231,7 +232,7 @@ export default function GroqChatDrawer({
       } else {
         // Groq Provider
         const storedKey = typeof window !== 'undefined' ? localStorage.getItem('groq_api_key') : null
-        const res = await fetch('http://localhost:8000/api/v1/ai/chat', {
+        const res = await fetch(`${getApiUrl()}/ai/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
