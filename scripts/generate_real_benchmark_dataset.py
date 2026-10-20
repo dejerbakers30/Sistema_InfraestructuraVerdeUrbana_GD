@@ -11,7 +11,7 @@ from pathlib import Path
 def generate_real_benchmark_dataset(
     num_samples: int = 1000,
     output_csv_backend: str = "backend/uploads/ml_datasets/real_urban_microclimate_dataset.csv",
-    output_csv_frontend: str = "frontend/public/real_urban_microclimate_dataset.csv",
+    output_csv_frontend: str = None,
     seed: int = 42
 ):
     np.random.seed(seed)
@@ -112,9 +112,10 @@ def generate_real_benchmark_dataset(
     
     # Asegurar rutas
     for path in [output_csv_backend, output_csv_frontend]:
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(path, index=False)
-        print(f"Dataset guardado en: {path} ({len(df)} registros)")
+        if path:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(path, index=False)
+            print(f"Dataset guardado en: {path} ({len(df)} registros)")
 
     return df
 

@@ -60,6 +60,19 @@ async def run_training_background_task(
             await db.commit()
 
             # Load dataset and extract features
+            if not os.path.exists(dataset_path):
+                alt_path = os.path.join(ML_UPLOAD_DIR, os.path.basename(dataset_path))
+                if os.path.exists(alt_path):
+                    dataset_path = alt_path
+                elif os.path.basename(dataset_path) == "real_urban_microclimate_dataset.csv":
+                    try:
+                        from scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
+                        generate_real_benchmark_dataset(1000, output_csv_backend=alt_path, output_csv_frontend=None)
+                    except Exception:
+                        from app.scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
+                        generate_real_benchmark_dataset(1000, output_csv_backend=alt_path, output_csv_frontend=None)
+                    dataset_path = alt_path
+
             df = ml_engine_service.load_dataset(dataset_path)
             X, y, selected_features, scaler = ml_engine_service.extract_features_and_target(
                 df, target_column=target_variable, feature_columns=feature_columns
@@ -237,8 +250,12 @@ async def seed_benchmark_dataset(
     benchmark_path = os.path.join(ML_UPLOAD_DIR, benchmark_filename)
 
     if not os.path.exists(benchmark_path):
-        from scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
-        generate_real_benchmark_dataset(1000, output_csv_backend=benchmark_path)
+        try:
+            from scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
+            generate_real_benchmark_dataset(1000, output_csv_backend=benchmark_path, output_csv_frontend=None)
+        except Exception:
+            from app.scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
+            generate_real_benchmark_dataset(1000, output_csv_backend=benchmark_path, output_csv_frontend=None)
 
     # Check if already in DB
     existing = await db.execute(select(MLDataset).where(MLDataset.filename == benchmark_filename))
@@ -365,7 +382,7 @@ async def start_training_job(
 async def get_job_status(
     job_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Get real-time training progress and status of an ML job"""
     job_uuid = uuid.UUID(job_id)
@@ -391,7 +408,7 @@ async def get_job_status(
 async def get_job_results(
     job_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """
     Returns full metrics comparison for the 5 trained models and statistical test results.
@@ -450,7 +467,7 @@ async def get_job_results(
 async def activate_model(
     model_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Activates a selected trained model for official predictions"""
     m_uuid = uuid.UUID(model_id)
@@ -480,7 +497,7 @@ async def run_prediction(
     model_id: str = Form(...),
     dataset_id: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Generates microclimate predictions using an active trained model"""
     m_uuid = uuid.UUID(model_id)

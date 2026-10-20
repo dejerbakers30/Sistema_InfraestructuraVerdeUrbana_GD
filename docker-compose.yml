@@ -33,8 +33,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: gemelo_digital_backend
     restart: unless-stopped
     ports:
@@ -53,6 +53,8 @@ services:
       - LOG_FILE=/app/logs/app.log
       - REPORT_TEMP_DIR=/app/temp/reports
     volumes:
+      - ./backend/app:/app/app
+      - ./scripts:/app/scripts
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
     depends_on:
@@ -69,8 +71,8 @@ services:
 
   celery_worker:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: gemelo_digital_celery
     restart: unless-stopped
     command: celery -A app.tasks worker --loglevel=info
@@ -83,6 +85,8 @@ services:
       - LOG_FILE=/app/logs/celery.log
       - REPORT_TEMP_DIR=/app/temp/reports
     volumes:
+      - ./backend/app:/app/app
+      - ./scripts:/app/scripts
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
     depends_on:

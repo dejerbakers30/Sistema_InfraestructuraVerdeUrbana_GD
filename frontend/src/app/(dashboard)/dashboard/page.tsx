@@ -28,6 +28,14 @@ import PETChart from '@/components/charts/PETChart'
 import ThemeToggle from '@/components/ThemeToggle'
 import MLEngineDashboard from '@/components/ml/MLEngineDashboard'
 import ReportsDashboard from '@/components/reports/ReportsDashboard'
+import InteractiveDataCard from '@/components/common/InteractiveDataCard'
+import {
+  SCENARIO_NAMES,
+  getTemperatureTable,
+  getHumidityTable,
+  getWindTable,
+  getPETTable
+} from '@/utils/microclimateData'
 import {
   Compass,
   Radio,
@@ -311,110 +319,98 @@ export default function DashboardPage() {
                 <div
                   className={`${
                     dashboardMapExpanded ? 'lg:col-span-12' : 'lg:col-span-5'
-                  } bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all`}
+                  }`}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-500">
-                        <Activity className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h2 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                          Gradiente Térmico
-                        </h2>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Mitigación UHI (-2.4 °C)
-                        </span>
-                      </div>
-                    </div>
-
-                    <AIReasoningBadge
-                      metricName="Gradiente Térmico Diurno"
-                      value="-2.4 °C"
-                      unit=""
-                      scenarioName={`Escenario ${selectedScenario || '1'}`}
-                    />
-                  </div>
-
-                  <div className="h-[460px]">
-                    <TemperatureChart scenarioId={selectedScenario} />
-                  </div>
+                  <InteractiveDataCard
+                    title="Gradiente Térmico Diurno"
+                    subtitle="Mitigación UHI (-2.4 °C) vs Línea Base"
+                    icon={<Activity className="w-4 h-4" />}
+                    scenarioName={SCENARIO_NAMES[selectedScenario || '1']}
+                    badge={
+                      <AIReasoningBadge
+                        metricName="Gradiente Térmico Diurno"
+                        value="-2.4 °C"
+                        unit=""
+                        scenarioName={`Escenario ${selectedScenario || '1'}`}
+                      />
+                    }
+                    chartComponent={<TemperatureChart scenarioId={selectedScenario} />}
+                    tableHeaders={getTemperatureTable(selectedScenario).headers}
+                    tableRows={getTemperatureTable(selectedScenario).rows}
+                    heightClass="h-[460px]"
+                    csvFilename={`gradiente_termico_escenario_${selectedScenario || '1'}`}
+                    pngFilename={`gradiente_termico_escenario_${selectedScenario || '1'}`}
+                  />
                 </div>
               </div>
 
               {/* Secondary Microclimate Analytics Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Humidity Chart */}
-                <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">💧</span>
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                          Humedad Relativa
-                        </h3>
-                        <span className="text-[10px] text-slate-500">Promedio: 68.4%</span>
-                      </div>
-                    </div>
+                <InteractiveDataCard
+                  title="Humedad Relativa"
+                  subtitle="Promedio: 68.4% • Evapotranspiración"
+                  icon={<span className="text-sm">💧</span>}
+                  scenarioName={SCENARIO_NAMES[selectedScenario || '1']}
+                  badge={
                     <AIReasoningBadge
                       metricName="Humedad Relativa y Evapotranspiración"
                       value="68.4"
                       unit="%"
                       scenarioName={`Escenario ${selectedScenario || '1'}`}
                     />
-                  </div>
-                  <div className="h-64">
-                    <HumidityChart scenarioId={selectedScenario} />
-                  </div>
-                </div>
+                  }
+                  chartComponent={<HumidityChart scenarioId={selectedScenario} />}
+                  tableHeaders={getHumidityTable(selectedScenario).headers}
+                  tableRows={getHumidityTable(selectedScenario).rows}
+                  heightClass="h-64"
+                  csvFilename={`humedad_relativa_escenario_${selectedScenario || '1'}`}
+                  pngFilename={`humedad_relativa_escenario_${selectedScenario || '1'}`}
+                />
 
                 {/* Wind Velocity Chart */}
-                <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">💨</span>
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                          Velocidad de Viento
-                        </h3>
-                        <span className="text-[10px] text-slate-500">Media: 3.2 m/s</span>
-                      </div>
-                    </div>
+                <InteractiveDataCard
+                  title="Velocidad de Viento"
+                  subtitle="Media: 3.2 m/s • Ventilación Urbana"
+                  icon={<span className="text-sm">💨</span>}
+                  scenarioName={SCENARIO_NAMES[selectedScenario || '1']}
+                  badge={
                     <AIReasoningBadge
                       metricName="Régimen de Vientos y Cañones Urbanos"
                       value="3.2"
                       unit="m/s"
                       scenarioName={`Escenario ${selectedScenario || '1'}`}
                     />
-                  </div>
-                  <div className="h-64">
-                    <WindChart scenarioId={selectedScenario} />
-                  </div>
-                </div>
+                  }
+                  chartComponent={<WindChart scenarioId={selectedScenario} />}
+                  tableHeaders={getWindTable(selectedScenario).headers}
+                  tableRows={getWindTable(selectedScenario).rows}
+                  heightClass="h-64"
+                  csvFilename={`velocidad_viento_escenario_${selectedScenario || '1'}`}
+                  pngFilename={`velocidad_viento_escenario_${selectedScenario || '1'}`}
+                />
 
                 {/* Thermal Comfort PET Chart */}
-                <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 transition-all">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">🧘</span>
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                          Confort Térmico PET
-                        </h3>
-                        <span className="text-[10px] text-slate-500">Índice: 24.1 °C</span>
-                      </div>
-                    </div>
+                <InteractiveDataCard
+                  title="Confort Térmico PET"
+                  subtitle="Índice Fisiológico: 24.1 °C"
+                  icon={<span className="text-sm">🧘</span>}
+                  scenarioName={SCENARIO_NAMES[selectedScenario || '1']}
+                  badge={
                     <AIReasoningBadge
                       metricName="Temperatura Fisiológica Equivalente (PET)"
                       value="24.1"
                       unit="°C"
                       scenarioName={`Escenario ${selectedScenario || '1'}`}
                     />
-                  </div>
-                  <div className="h-64">
-                    <PETChart scenarioId={selectedScenario} />
-                  </div>
-                </div>
+                  }
+                  chartComponent={<PETChart scenarioId={selectedScenario} />}
+                  tableHeaders={getPETTable(selectedScenario).headers}
+                  tableRows={getPETTable(selectedScenario).rows}
+                  heightClass="h-64"
+                  csvFilename={`confort_termico_pet_escenario_${selectedScenario || '1'}`}
+                  pngFilename={`confort_termico_pet_escenario_${selectedScenario || '1'}`}
+                />
               </div>
             </div>
           )}

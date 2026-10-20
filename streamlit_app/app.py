@@ -35,6 +35,18 @@ import xgboost as xgb
 # -----------------------------------------------------------------------------
 # Page Configuration & Academic Theme
 # -----------------------------------------------------------------------------
+PLOTLY_HQ_CONFIG = {
+    'toImageButtonOptions': {
+        'format': 'png',
+        'filename': 'figura_gemelo_digital_q1_300dpi',
+        'height': 1200,
+        'width': 1800,
+        'scale': 3
+    },
+    'displaylogo': False,
+    'scrollZoom': True
+}
+
 st.set_page_config(
     page_title="Gemelo Digital Urbano | Motor Científico ML & Validación Q1",
     page_icon="🌿",
@@ -311,7 +323,7 @@ if crisp_phase == "1. Comprensión & EDA":
         title="Matriz de Correlación de Pearson entre Parámetros Urbanos y Microclimáticos"
     )
     fig_corr.update_layout(height=520)
-    st.plotly_chart(fig_corr, use_container_width=True)
+    st.plotly_chart(fig_corr, use_container_width=True, config=PLOTLY_HQ_CONFIG)
     
     st.markdown("""
     <div class="caption-box">
@@ -351,7 +363,7 @@ if crisp_phase == "1. Comprensión & EDA":
             mapbox_style="carto-positron"
         )
     fig_geo.update_layout(height=480, margin=dict(l=10, r=10, t=40, b=10))
-    st.plotly_chart(fig_geo, use_container_width=True)
+    st.plotly_chart(fig_geo, use_container_width=True, config=PLOTLY_HQ_CONFIG)
 
 
 # =============================================================================
@@ -614,7 +626,7 @@ elif crisp_phase == "4. Selección del Mejor Modelo":
         height=480,
         title="<b>Figura 5. Evaluación multicriterio normalizada (Escala 0-100, 100 = Desempeño Óptimo)</b>"
     )
-    st.plotly_chart(fig_radar, use_container_width=True)
+    st.plotly_chart(fig_radar, use_container_width=True, config=PLOTLY_HQ_CONFIG)
 
 
 # =============================================================================
@@ -676,7 +688,7 @@ elif crisp_phase == "5. Validación Mejorada & Diagnósticos":
             height=420,
             title=f"<b>Fig. 1. Correlación Real vs Predicho - {model_name} (R² = {r_val**2:.4f})</b>"
         )
-        st.plotly_chart(fig_scatter, use_container_width=True)
+        st.plotly_chart(fig_scatter, use_container_width=True, config=PLOTLY_HQ_CONFIG)
         
     # FIGURE 2: Residuals Diagnostics & Homoscedasticity
     with col2:
@@ -709,7 +721,7 @@ elif crisp_phase == "5. Validación Mejorada & Diagnósticos":
             height=420,
             title=f"<b>Fig. 2. Distribución y Homocedasticidad de Residuos ({model_name})</b>"
         )
-        st.plotly_chart(fig_res, use_container_width=True)
+        st.plotly_chart(fig_res, use_container_width=True, config=PLOTLY_HQ_CONFIG)
         
     # FIGURE 6: Feature Importance
     st.subheader("Figura 6: Importancia Biofísica de Variables Urbanísticas")
@@ -736,7 +748,7 @@ elif crisp_phase == "5. Validación Mejorada & Diagnósticos":
         title=f"<b>Figura 6. Peso explicativo relativo de las variables urbanas ({model_name})</b>"
     )
     fig_imp.update_layout(height=380)
-    st.plotly_chart(fig_imp, use_container_width=True)
+    st.plotly_chart(fig_imp, use_container_width=True, config=PLOTLY_HQ_CONFIG)
 
 
 # =============================================================================
@@ -801,7 +813,7 @@ elif crisp_phase == "6. Pruebas Estadísticas Rigurosas":
     # Render Demšar Diagram (Figure 3)
     st.subheader("Figura 3: Diagrama de Diferencia Crítica de Demšar (Nemenyi CD)")
     fig_demsar = plot_demsar_diagram_plotly(ranked_models, cd_val)
-    st.plotly_chart(fig_demsar, use_container_width=True)
+    st.plotly_chart(fig_demsar, use_container_width=True, config=PLOTLY_HQ_CONFIG)
     
     # 3. Wilcoxon Signed-Rank Pairwise Table (Table 5)
     st.subheader(f"Tabla 5: Contrastes Pareados de Wilcoxon Signed-Rank vs. Modelo Óptimo ({best_ranked['name']})")

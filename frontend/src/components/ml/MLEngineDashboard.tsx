@@ -1,6 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { Maximize2, Minimize2, FileSpreadsheet } from 'lucide-react'
+import { exportTableToCSV } from '@/utils/exportUtils'
+import { getApiUrl } from '@/utils/api'
 
 import ScientificValidationSuite, {
   ModelMetric,
@@ -26,6 +29,25 @@ export default function MLEngineDashboard({
 
   const [models, setModels] = useState<ModelMetric[]>([])
   const [statsData, setStatsData] = useState<StatisticalTestsData | null>(null)
+
+  // Zoom de tabla y pantalla completa
+  const [tableFontSize, setTableFontSize] = useState<'compact' | 'normal' | 'large'>('normal')
+  const [isTableFullscreen, setIsTableFullscreen] = useState<boolean>(false)
+
+  const handleExportModelsCSV = () => {
+    const headers = ['Modelo ML', 'Tipo de Modelo', 'RMSE', 'MAE', 'R2 Score', 'MSE', 'MAPE (%)', 'Estado Activo']
+    const rows = models.map(m => [
+      m.name,
+      m.model_type,
+      m.metrics?.rmse?.toFixed(4) || '—',
+      m.metrics?.mae?.toFixed(4) || '—',
+      m.metrics?.r2?.toFixed(4) || '—',
+      m.metrics?.mse?.toFixed(4) || '—',
+      `${m.metrics?.mape?.toFixed(2) || '—'}%`,
+      m.is_active ? 'Activo (Ganador)' : 'Comparativo'
+    ])
+    exportTableToCSV(headers, rows, 'benchmark_modelos_ml_5fold.csv')
+  }
 
   // Initialize persistent states from sessionStorage
   useEffect(() => {
@@ -82,7 +104,7 @@ export default function MLEngineDashboard({
     return token ? { Authorization: `Bearer ${token}` } : {}
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+  const apiUrl = getApiUrl()
 
   // Fetch available datasets
   const fetchDatasets = async () => {
@@ -537,16 +559,80 @@ export default function MLEngineDashboard({
 
       {/* Model Performance Comparison Table */}
       {models.length > 0 && (
-        <div className="p-6 bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center justify-between">
-            <span>Tabla Comparativa (3 Tradicionales + 2 Híbridos)</span>
-            <span className="text-xs font-normal text-slate-600 dark:text-slate-400">Validación Cruzada 5-Fold</span>
-          </h3>
+        <div className="p-6 bg-white/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Tabla Comparativa (3 Tradicionales + 2 Híbridos)</span>
+                <span className="text-xs font-normal text-slate-600 dark:text-slate-400">Validación Cruzada 5-Fold</span>
+              </h3>
+            </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+            <div className="flex items-center gap-2">
+              {/* Controles de Zoom Tipográfico */}
+              <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tableFontSize === 'large') setTableFontSize('normal')
+                    else if (tableFontSize === 'normal') setTableFontSize('compact')
+                  }}
+                  disabled={tableFontSize === 'compact'}
+                  className="px-2 py-1 rounded-lg hover:text-slate-900 dark:hover:text-white font-bold font-mono disabled:opacity-40"
+                  title="Disminuir Tamaño de Letra (A-)"
+                >
+                  A-
+                </button>
+                <span className="px-1 text-[10px] font-mono text-slate-400 uppercase">
+                  {tableFontSize === 'compact' ? 'Min' : tableFontSize === 'normal' ? 'Norm' : 'Max'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tableFontSize === 'compact') setTableFontSize('normal')
+                    else if (tableFontSize === 'normal') setTableFontSize('large')
+                  }}
+                  disabled={tableFontSize === 'large'}
+                  className="px-2 py-1 rounded-lg hover:text-slate-900 dark:hover:text-white font-bold font-mono disabled:opacity-40"
+                  title="Aumentar Tamaño de Letra (A+)"
+                >
+                  A+
+                </button>
+              </div>
+
+              {/* Descargar Tabla Excel */}
+              <button
+                type="button"
+                onClick={handleExportModelsCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600/10 hover:bg-cyan-600/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all"
+                title="Descargar Métricas de Modelos en Formato Excel (.csv UTF-8)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Excel</span>
+              </button>
+
+              {/* Maximizar Tabla */}
+              <button
+                type="button"
+                onClick={() => setIsTableFullscreen(true)}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors"
+                title="Ampliar Tabla a Pantalla Completa"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+            <table className={`w-full text-left border-collapse ${
+              tableFontSize === 'compact'
+                ? 'text-xs [&_th]:py-2 [&_th]:px-3 [&_td]:py-2 [&_td]:px-3'
+                : tableFontSize === 'large'
+                ? 'text-base [&_th]:py-4 [&_th]:px-5 [&_td]:py-4 [&_td]:px-5'
+                : 'text-sm [&_th]:py-3 [&_th]:px-4 [&_td]:py-3.5 [&_td]:px-4'
+            }`}>
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950/60">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950/60 uppercase tracking-wider">
                   <th className="py-3 px-4">Modelo ML</th>
                   <th className="py-3 px-4">Tipo de Modelo</th>
                   <th className="py-3 px-4">RMSE</th>
@@ -573,6 +659,84 @@ export default function MLEngineDashboard({
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FULLSCREEN: TABLA DE MODELOS MAXIMIZADA */}
+      {isTableFullscreen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-2xl animate-in fade-in duration-200"
+        >
+          <div className="relative w-full max-w-6xl h-[85vh] flex flex-col bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 overflow-hidden">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-500">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                    Tabla Comparativa de Modelos ML (Vista Ampliada)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Evaluación y Desempeño en Validación Cruzada 5-Fold
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleExportModelsCSV}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg transition-all"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Descargar Excel (.csv)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsTableFullscreen(false)}
+                  className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                  title="Cerrar vista ampliada / Disminuir (Esc)"
+                >
+                  <Minimize2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 p-2">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-100 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-xs">
+                  <tr>
+                    <th className="py-3 px-4">Modelo ML</th>
+                    <th className="py-3 px-4">Tipo de Modelo</th>
+                    <th className="py-3 px-4">RMSE</th>
+                    <th className="py-3 px-4">MAE</th>
+                    <th className="py-3 px-4">R² Score</th>
+                    <th className="py-3 px-4">MSE</th>
+                    <th className="py-3 px-4">MAPE (%)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {models.map(m => (
+                    <tr key={m.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${m.is_active ? 'bg-teal-500/10' : ''}`}>
+                      <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        {m.is_active && <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />}
+                        {m.name}
+                      </td>
+                      <td className="py-3.5 px-4">{getModelTypeBadge(m.model_type)}</td>
+                      <td className="py-3.5 px-4 font-mono text-teal-600 dark:text-teal-400 font-bold">{m.metrics?.rmse?.toFixed(4)}</td>
+                      <td className="py-3.5 px-4 font-mono">{m.metrics?.mae?.toFixed(4)}</td>
+                      <td className="py-3.5 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">{m.metrics?.r2?.toFixed(4)}</td>
+                      <td className="py-3.5 px-4 font-mono">{m.metrics?.mse?.toFixed(4)}</td>
+                      <td className="py-3.5 px-4 font-mono">{m.metrics?.mape?.toFixed(2)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

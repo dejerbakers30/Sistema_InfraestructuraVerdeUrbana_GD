@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
+import { FileSpreadsheet, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react'
+import { exportTableToCSV } from '@/utils/exportUtils'
 import PrintableReportDocument from './PrintableReportDocument'
 
 export interface PreviewData {
@@ -57,6 +59,48 @@ export default function ReportPreviewModal({
 }: ReportPreviewModalProps) {
   const [activeSheetTab, setActiveSheetTab] = useState<'kpi' | 'gi' | 'ts' | 'ml'>('gi')
   const [isDownloading, setIsDownloading] = useState(false)
+  const [tableFontSize, setTableFontSize] = useState<'compact' | 'normal' | 'large'>('normal')
+
+  const handleExportActiveSheet = () => {
+    if (!data) return
+    if (activeSheetTab === 'gi') {
+      const headers = ['Código', 'Elemento', 'Especie / Tipo', 'Altura (m)', 'LAI', 'Enfriamiento']
+      const rows = data.green_infrastructure_list.map(item => [
+        item.id,
+        item.name,
+        item.type,
+        item.height,
+        item.lai,
+        item.cooling_effect
+      ])
+      exportTableToCSV(headers, rows, 'reporte_infraestructura_verde.csv')
+    } else if (activeSheetTab === 'ts') {
+      const headers = ['Hora', 'Temperatura (°C)', 'Humedad (%)', 'PET Confort (°C)', 'Velocidad Viento (m/s)']
+      const rows = data.time_series_sample.map(ts => [
+        ts.time,
+        ts.temperature,
+        ts.humidity,
+        ts.pet,
+        ts.wind_speed || '—'
+      ])
+      exportTableToCSV(headers, rows, 'reporte_series_temporales.csv')
+    } else if (activeSheetTab === 'ml') {
+      const headers = ['Modelo ML', 'RMSE', 'MAE', 'R2 Score', 'MSE', 'Estado']
+      const rows = data.ml_models.map(m => [
+        m.name,
+        m.rmse,
+        m.mae,
+        m.r2,
+        m.mse,
+        m.is_active ? 'Activo' : 'Comparativo'
+      ])
+      exportTableToCSV(headers, rows, 'reporte_modelos_ml.csv')
+    } else {
+      const headers = ['Indicador Microclimático', 'Valor', 'Estado']
+      const rows = data.kpis.map(k => [k.metric, k.value, k.status])
+      exportTableToCSV(headers, rows, 'reporte_indicadores_kpi.csv')
+    }
+  }
 
   React.useEffect(() => {
     if (!data) return
@@ -215,61 +259,109 @@ export default function ReportPreviewModal({
               </div>
 
               {/* Excel Sheet Tabs (Tailored to non-empty data) */}
-              <div className="bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 border-b border-slate-300 dark:border-slate-700 overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={() => setActiveSheetTab('kpi')}
-                  className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
-                    activeSheetTab === 'kpi'
-                      ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  📈 Resumen & KPIs
-                </button>
-                {data.green_infrastructure_list && data.green_infrastructure_list.length > 0 && (
+              <div className="bg-slate-200 dark:bg-slate-800 p-1 flex items-center justify-between border-b border-slate-300 dark:border-slate-700 flex-wrap gap-2">
+                <div className="flex items-center gap-1 overflow-x-auto">
                   <button
                     type="button"
-                    onClick={() => setActiveSheetTab('gi')}
+                    onClick={() => setActiveSheetTab('kpi')}
                     className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
-                      activeSheetTab === 'gi'
+                      activeSheetTab === 'kpi'
                         ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
                     }`}
                   >
-                    🍃 Infraestructura Verde
+                    📈 Resumen & KPIs
                   </button>
-                )}
-                {data.time_series_sample && data.time_series_sample.length > 0 && (
+                  {data.green_infrastructure_list && data.green_infrastructure_list.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSheetTab('gi')}
+                      className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
+                        activeSheetTab === 'gi'
+                          ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      🍃 Infraestructura Verde
+                    </button>
+                  )}
+                  {data.time_series_sample && data.time_series_sample.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSheetTab('ts')}
+                      className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
+                        activeSheetTab === 'ts'
+                          ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      ⏱️ Series Temporales
+                    </button>
+                  )}
+                  {data.ml_models && data.ml_models.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSheetTab('ml')}
+                      className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
+                        activeSheetTab === 'ml'
+                          ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      🤖 Modelos ML Benchmark
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 px-2">
+                  {/* Zoom Tipográfico */}
+                  <div className="flex items-center p-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (tableFontSize === 'large') setTableFontSize('normal')
+                        else if (tableFontSize === 'normal') setTableFontSize('compact')
+                      }}
+                      disabled={tableFontSize === 'compact'}
+                      className="px-2 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 font-bold font-mono disabled:opacity-40"
+                      title="Disminuir Tamaño de Letra (A-)"
+                    >
+                      A-
+                    </button>
+                    <span className="px-1 text-[10px] font-mono text-slate-400 uppercase">
+                      {tableFontSize === 'compact' ? 'Min' : tableFontSize === 'normal' ? 'Norm' : 'Max'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (tableFontSize === 'compact') setTableFontSize('normal')
+                        else if (tableFontSize === 'normal') setTableFontSize('large')
+                      }}
+                      disabled={tableFontSize === 'large'}
+                      className="px-2 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 font-bold font-mono disabled:opacity-40"
+                      title="Aumentar Tamaño de Letra (A+)"
+                    >
+                      A+
+                    </button>
+                  </div>
+
+                  {/* Descargar Excel directo */}
                   <button
                     type="button"
-                    onClick={() => setActiveSheetTab('ts')}
-                    className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
-                      activeSheetTab === 'ts'
-                        ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
-                    }`}
+                    onClick={handleExportActiveSheet}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition-all"
+                    title="Descargar esta hoja en formato Excel (.csv UTF-8 con BOM)"
                   >
-                    ⏱️ Series Temporales
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Descargar CSV</span>
                   </button>
-                )}
-                {data.ml_models && data.ml_models.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveSheetTab('ml')}
-                    className={`px-3 py-1.5 rounded-t-lg text-xs font-bold transition-all ${
-                      activeSheetTab === 'ml'
-                        ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-t-2 border-emerald-600 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    🤖 Modelos ML Benchmark
-                  </button>
-                )}
+                </div>
               </div>
 
               {/* Grid Content */}
-              <div className="p-4 overflow-x-auto font-mono text-xs">
+              <div className={`p-4 overflow-x-auto font-mono ${
+                tableFontSize === 'compact' ? 'text-[11px]' : tableFontSize === 'large' ? 'text-sm' : 'text-xs'
+              }`}>
                 {activeSheetTab === 'gi' && (
                   <table className="w-full border-collapse border border-slate-300 dark:border-slate-700 text-left">
                     <thead>
