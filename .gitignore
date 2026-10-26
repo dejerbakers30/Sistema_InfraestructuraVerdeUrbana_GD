@@ -117,5 +117,10 @@ dump.rdb
 scripts/install_windows_service.ps1
 
 # Allow real LST dataset and outputs
+!data/
+!data/*.csv
+!backend/app/data/
+!backend/app/data/real_results/
+!backend/app/data/real_results/**
 !datos_reales_lst/
 !datos_reales_lst/**

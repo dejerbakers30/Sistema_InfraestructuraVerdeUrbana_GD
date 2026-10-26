@@ -3,6 +3,7 @@ Configuration management using Pydantic Settings.
 Environment variables are loaded from .env file.
 """
 
+import os
 from typing import List, Optional, Union
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
@@ -100,6 +101,10 @@ class Settings(BaseSettings):
     ALLOWED_FILE_EXTENSIONS: List[str] = [
         ".geojson", ".json", ".csv", ".nc", ".epw", ".inx", ".simx"
     ]
+    REAL_DATA_DIR: str = Field(
+        default=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "real_results")),
+        description="Path to real LST dataset and outputs directory"
+    )
     
     # CORS
     CORS_ORIGINS: Union[List[str], str] = Field(

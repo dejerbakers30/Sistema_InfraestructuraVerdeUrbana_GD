@@ -8,10 +8,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_squared_error
 import xgboost as xgb
 
-warnings.filterwarnings('ignore')
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(BASE, 'out')
-d = pd.read_csv(os.path.join(BASE, 'data', 'final.csv'))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DATA_DIR = os.environ.get('DATA_DIR', os.path.join(ROOT, 'data'))
+OUT = os.environ.get('OUT_DIR', os.path.join(ROOT, 'backend', 'app', 'data', 'real_results'))
+d = pd.read_csv(os.path.join(DATA_DIR, 'final.csv'))
 H = json.load(open(os.path.join(OUT, 'hiperparametros.json')))
 F = ['ndvi', 'ndbi', 'albedo', 'veg_frac', 'built_frac', 'elevation', 't2m', 'rh', 'wind', 'ssrd']
 X = d[F].values

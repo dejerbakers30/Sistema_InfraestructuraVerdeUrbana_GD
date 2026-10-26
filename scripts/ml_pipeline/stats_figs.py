@@ -7,8 +7,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(BASE, 'out')
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+OUT = os.environ.get('OUT_DIR', os.path.join(ROOT, 'backend', 'app', 'data', 'real_results'))
 plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 10})
 R = json.load(open(os.path.join(OUT, 'resultados.json')))
 MODELS = ['Stacking Ensemble', 'CNN-LSTM', 'XGBoost', 'Random Forest', 'SVR']

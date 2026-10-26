@@ -17,13 +17,14 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import xgboost as xgb, optuna
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(BASE, 'scripts'))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cnnlstm import CNNLSTMRegressor, BACKEND
 
-OUT = os.path.join(BASE, 'out')
+DATA_DIR = os.environ.get('DATA_DIR', os.path.join(ROOT, 'data'))
+OUT = os.environ.get('OUT_DIR', os.path.join(ROOT, 'backend', 'app', 'data', 'real_results'))
 SEED = 42
-d = pd.read_csv(os.path.join(BASE, 'data', 'final.csv'))
+d = pd.read_csv(os.path.join(DATA_DIR, 'final.csv'))
 F = ['ndvi', 'ndbi', 'albedo', 'veg_frac', 'built_frac', 'elevation', 't2m', 'rh', 'wind', 'ssrd']
 X = d[F].values
 y = d.lst.values

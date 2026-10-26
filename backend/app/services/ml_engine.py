@@ -21,8 +21,9 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Tuple, Any, Optional
 
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold, GroupKFold, GroupShuffleSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.ensemble import RandomForestRegressor, StackingRegressor
 from sklearn.svm import SVR
@@ -181,7 +182,8 @@ class MLEngineService:
 
         # Map aliases if target name differs slightly
         target_aliases = {
-            "temperature": ["temperature", "temp", "tair_celsius", "t_air", "air_temp"],
+            "lst": ["lst", "land_surface_temperature", "lst_celsius", "ts"],
+            "temperature": ["lst", "temperature", "temp", "tair_celsius", "t_air", "air_temp"],
             "humidity": ["humidity", "rel_humidity_pct", "rh", "hum"],
             "pet": ["pet", "pet_celsius", "thermal_comfort", "utci"],
             "wind_speed": ["wind_speed", "wind", "wind_speed_ms", "vel_viento"]
@@ -199,13 +201,28 @@ class MLEngineService:
             else:
                 matched_target = numeric_df.columns[-1]
 
-        if not feature_columns:
-            feature_columns = [col for col in numeric_df.columns if col != matched_target]
-        else:
-            feature_columns = [col for col in feature_columns if col in numeric_df.columns and col != matched_target]
+        # Mandatory exclusions: geographical metadata, temporal identifiers, block IDs, categorical landcover
+        ALWAYS_EXCLUDED = {"latitude", "longitude", "lat", "lon", "date", "block", "point_id", "landcover"}
+        excluded_cols = set(ALWAYS_EXCLUDED)
+        
+        # Exclude PET when predicting temperature/lst to avoid target leakage / proxy bias
+        if matched_target.lower() in ["lst", "temperature", "temp", "tair_celsius", "t_air", "air_temp"]:
+            excluded_cols.add("pet")
+            excluded_cols.add("pet_celsius")
 
         if not feature_columns:
-            raise ValueError("No hay variables predictoras disponibles tras seleccionar el objetivo")
+            feature_columns = [
+                col for col in numeric_df.columns
+                if col.lower() not in excluded_cols and col != matched_target
+            ]
+        else:
+            feature_columns = [
+                col for col in feature_columns
+                if col in numeric_df.columns and col.lower() not in excluded_cols and col != matched_target
+            ]
+
+        if not feature_columns:
+            raise ValueError("No hay variables predictoras disponibles tras seleccionar el objetivo y aplicar exclusiones")
 
         X = numeric_df[feature_columns].values
         y = numeric_df[matched_target].values
@@ -321,10 +338,12 @@ class MLEngineService:
         X: np.ndarray,
         y: np.ndarray,
         artifact_dir: str,
-        feature_names: Optional[List[str]] = None
+        feature_names: Optional[List[str]] = None,
+        groups: Optional[np.ndarray] = None
     ) -> Dict[str, Any]:
         """
         Trains all 5 mandatory models with 5-Fold Cross Validation.
+        Supports GroupKFold by spatial blocks if provided.
         Generates full telemetry: fold-by-fold scores, feature importance, residual diagnostics,
         extreme heat tolerance, latency, and scatter plots.
         """
@@ -333,14 +352,28 @@ class MLEngineService:
         if not feature_names:
             feature_names = [f"var_{i}" for i in range(input_dim)]
 
+        # Save feature names alongside model artifacts for strict inference consistency
+        with open(os.path.join(artifact_dir, "features.json"), "w", encoding="utf-8") as f:
+            json.dump(feature_names, f, indent=2)
+
         # Train / Test split (80% train, 20% test for final evaluation)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        if groups is not None and len(np.unique(groups)) >= 5:
+            try:
+                gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+                train_idx_outer, test_idx_outer = next(gss.split(X, y, groups))
+                X_train, X_test = X[train_idx_outer], X[test_idx_outer]
+                y_train, y_test = y[train_idx_outer], y[test_idx_outer]
+                groups_train = groups[train_idx_outer]
+            except Exception:
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                groups_train = None
+        else:
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            groups_train = None
         
         # Extreme conditions threshold (upper quartile, e.g. heatwave / thermal stress peaks)
         heatwave_threshold = float(np.percentile(y_test, 75))
         heatwave_mask = y_test >= heatwave_threshold
-
-        kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
         # -------------------------------------------------------------
         # 1. XGBoost Regressor
@@ -375,10 +408,10 @@ class MLEngineService:
         joblib.dump(rf_model, os.path.join(artifact_dir, "random_forest.pkl"))
 
         # -------------------------------------------------------------
-        # 3. Support Vector Regressor (SVR)
+        # 3. Support Vector Regressor (SVR) inside make_pipeline
         # -------------------------------------------------------------
         t0 = time.time()
-        svr_model = SVR(kernel="rbf", C=1.0, epsilon=0.1)
+        svr_model = make_pipeline(StandardScaler(), SVR(kernel="rbf", C=1.0, epsilon=0.1))
         svr_model.fit(X_train, y_train)
         train_time_svr = round((time.time() - t0) * 1000, 1)
 
@@ -389,18 +422,27 @@ class MLEngineService:
         joblib.dump(svr_model, os.path.join(artifact_dir, "svr.pkl"))
 
         # -------------------------------------------------------------
-        # 4. Hybrid 1: Stacking Regressor
+        # 4. Hybrid 1: Stacking Regressor (with internal grouped CV if groups available)
         # -------------------------------------------------------------
         t0 = time.time()
         estimators = [
             ("xgb", xgb.XGBRegressor(n_estimators=50, max_depth=4, random_state=42)),
             ("rf", RandomForestRegressor(n_estimators=50, max_depth=6, random_state=42)),
-            ("svr", SVR(kernel="rbf", C=1.0))
+            ("svr", make_pipeline(StandardScaler(), SVR(kernel="rbf", C=1.0)))
         ]
-        stacking_model = StackingRegressor(
-            estimators=estimators,
-            final_estimator=Ridge(alpha=1.0)
-        )
+        if groups_train is not None and len(np.unique(groups_train)) >= 5:
+            stack_cv = list(GroupKFold(n_splits=5, shuffle=True, random_state=42).split(X_train, y_train, groups_train))
+            stacking_model = StackingRegressor(
+                estimators=estimators,
+                final_estimator=Ridge(alpha=1.0),
+                cv=stack_cv
+            )
+        else:
+            stacking_model = StackingRegressor(
+                estimators=estimators,
+                final_estimator=Ridge(alpha=1.0),
+                cv=5
+            )
         stacking_model.fit(X_train, y_train)
         train_time_stacking = round((time.time() - t0) * 1000, 1)
 
@@ -443,8 +485,13 @@ class MLEngineService:
             "cnn_lstm": []
         }
 
+        if groups is not None and len(np.unique(groups)) >= 5:
+            cv_splits = list(GroupKFold(n_splits=5, shuffle=True, random_state=42).split(X, y, groups))
+        else:
+            cv_splits = list(KFold(n_splits=5, shuffle=True, random_state=42).split(X, y))
+
         y_cv_true = []
-        for fold_idx, (train_idx, val_idx) in enumerate(kf.split(X)):
+        for fold_idx, (train_idx, val_idx) in enumerate(cv_splits):
             X_tr, X_val = X[train_idx], X[val_idx]
             y_tr, y_val = y[train_idx], y[val_idx]
             y_cv_true.extend(y_val)
@@ -470,7 +517,7 @@ class MLEngineService:
                 "r2": round(float(r2_score(y_val, p_rf)), 4)
             })
 
-            m_svr = SVR(kernel="rbf").fit(X_tr, y_tr)
+            m_svr = make_pipeline(StandardScaler(), SVR(kernel="rbf")).fit(X_tr, y_tr)
             p_svr = m_svr.predict(X_val)
             cv_predictions["svr"].extend(p_svr)
             fold_metrics["svr"].append({
@@ -480,7 +527,11 @@ class MLEngineService:
                 "r2": round(float(r2_score(y_val, p_svr)), 4)
             })
 
-            m_stack = StackingRegressor(estimators=estimators, final_estimator=Ridge()).fit(X_tr, y_tr)
+            if groups is not None and len(np.unique(groups[train_idx])) >= 5:
+                fold_stack_cv = list(GroupKFold(n_splits=5, shuffle=True, random_state=42).split(X_tr, y_tr, groups[train_idx]))
+                m_stack = StackingRegressor(estimators=estimators, final_estimator=Ridge(), cv=fold_stack_cv).fit(X_tr, y_tr)
+            else:
+                m_stack = StackingRegressor(estimators=estimators, final_estimator=Ridge(), cv=5).fit(X_tr, y_tr)
             p_stack = m_stack.predict(X_val)
             cv_predictions["stacking"].extend(p_stack)
             fold_metrics["stacking"].append({
