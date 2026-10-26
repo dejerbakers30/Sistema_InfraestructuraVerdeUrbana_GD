@@ -1,6 +1,6 @@
 """
 Service for loading, caching, and serving empirical real results from
-the LST research dataset (Trujillo, Peru) located in `datos_reales_lst/out`.
+the LST research dataset (Trujillo, Peru) located in `backend/app/data/real_results`.
 """
 
 import os
@@ -158,7 +158,7 @@ class RealResultsService:
         stat_temporal = estadistica.get("temporal", {})
 
         payload: Dict[str, Any] = {
-            "source": "datos_reales_lst (Landsat 8-9, Sentinel-2, ERA5-Land, WorldCover, SRTM)",
+            "source": "LST Trujillo Dataset (Landsat 8-9, Sentinel-2, ERA5-Land, WorldCover, SRTM)",
             "city": "Trujillo, Perú",
             "period": "2023–2025",
             "target": "lst",

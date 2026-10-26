@@ -22,8 +22,9 @@ RUN pip install --upgrade pip && \
 COPY backend/requirements.txt /app/
 RUN pip install -r requirements.txt
 
-# Copy application code
+# Copy application code and datasets
 COPY backend/ /app
+COPY data/ /app/data
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/uploads /app/temp/reports

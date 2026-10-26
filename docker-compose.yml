@@ -52,9 +52,11 @@ services:
       - UPLOAD_DIR=/app/uploads
       - LOG_FILE=/app/logs/app.log
       - REPORT_TEMP_DIR=/app/temp/reports
+      - REAL_DATA_DIR=/app/app/data/real_results
     volumes:
       - ./backend/app:/app/app
       - ./scripts:/app/scripts
+      - ./data:/app/data
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
     depends_on:
@@ -84,9 +86,11 @@ services:
       - UPLOAD_DIR=/app/uploads
       - LOG_FILE=/app/logs/celery.log
       - REPORT_TEMP_DIR=/app/temp/reports
+      - REAL_DATA_DIR=/app/app/data/real_results
     volumes:
       - ./backend/app:/app/app
       - ./scripts:/app/scripts
+      - ./data:/app/data
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
     depends_on:

@@ -126,18 +126,25 @@ st.markdown("""
 # -----------------------------------------------------------------------------
 DATA_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "backend", "uploads", "ml_datasets", "real_urban_microclimate_dataset.csv"
+    "data", "final.csv"
 )
 
 @st.cache_data
 def load_microclimate_dataset(path: str = DATA_PATH) -> pd.DataFrame:
     if os.path.exists(path):
         return pd.read_csv(path)
-    # Fallback to local search if path differs
-    alt_path = "backend/uploads/ml_datasets/real_urban_microclimate_dataset.csv"
+    alt_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data", "clean.csv"
+    )
     if os.path.exists(alt_path):
+        st.warning("Se detectó 'data/clean.csv'. Ejecute 'python scripts/ml_pipeline/qc.py' para generar 'data/final.csv'.")
         return pd.read_csv(alt_path)
-    raise FileNotFoundError(f"No se encontró el dataset en {path} ni en {alt_path}")
+    raise FileNotFoundError(
+        f"No se encontró el dataset en '{path}'. "
+        "Por favor ejecute el pipeline de datos reales ejecutando desde la raíz:\n"
+        "python scripts/ml_pipeline/clean.py && python scripts/ml_pipeline/qc.py"
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -276,10 +283,29 @@ crisp_phase = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Parámetros Experimentales")
+
+# Variables objetivo disponibles en dataset empírico real
+available_targets = []
+if "lst" in df_raw.columns:
+    available_targets.append("lst")
+if "t2m" in df_raw.columns:
+    available_targets.append("t2m")
+if "temperature" in df_raw.columns:
+    available_targets.append("temperature")
+if "pet" in df_raw.columns:
+    available_targets.append("pet")
+if not available_targets:
+    available_targets = [df_raw.columns[-1]]
+
 target_var = st.sidebar.selectbox(
     "Variable Objetivo a Predecir:",
-    options=["temperature", "pet"],
-    format_func=lambda x: "Temperatura del Aire (°C)" if x == "temperature" else "Índice Bioclimático PET (°C)"
+    options=available_targets,
+    format_func=lambda x: {
+        "lst": "Temperatura de Superficie LST (°C) — Satelital Real",
+        "t2m": "Temperatura 2m ERA5-Land (°C)",
+        "temperature": "Temperatura del Aire (°C)",
+        "pet": "Índice Bioclimático PET (°C)"
+    }.get(x, x)
 )
 cv_splits = st.sidebar.slider("Folds de Validación Cruzada:", min_value=3, max_value=10, value=5, step=1)
 random_seed = st.sidebar.number_input("Semilla Aleatoria (Reproducibilidad):", value=42, step=1)
@@ -292,20 +318,30 @@ unit_label = "°C"
 # =============================================================================
 if crisp_phase == "1. Comprensión & EDA":
     st.header("Fase 1: Análisis Exploratorio de Datos (EDA) y Comprensión Biofísica")
-    st.markdown("""
-    En esta fase se explora la estructura biofísica y espacial del dataset microclimático real de **Trujillo, Perú** ($N = 1000$ registros continuos),
-    recolectado en la cuadrícula urbana bajo condiciones de verano subtropical árido.
+    st.markdown(f"""
+    En esta fase se explora la estructura biofísica y espacial del dataset satelital empírico real de **Trujillo, Perú**
+    ($N = {len(df_raw):,}$ registros válidos tras control de calidad), recolectado mediante sensores multiespectrales 
+    Landsat 8-9, Sentinel-2 y ERA5-Land en la cuadrícula urbana (2023–2025).
     """)
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Puntos de Muestreo Urbano", f"{len(df_raw):,}")
+        st.metric("Puntos Satelitales Válidos", f"{len(df_raw):,}")
     with col2:
-        st.metric("Variables Biofísicas", f"{df_raw.shape[1]}")
+        num_preds = len([c for c in df_raw.columns if c not in {'date', 'point_id', 'block', 'latitude', 'longitude', 'landcover', 'lst', 'pet', 'temperature', 't2m'}])
+        st.metric("Variables Predictoras", f"{num_preds}")
     with col3:
-        st.metric("Temperatura Media", f"{df_raw['temperature'].mean():.2f} °C")
+        if target_var in df_raw.columns:
+            st.metric(f"{target_var.upper()} Media", f"{df_raw[target_var].mean():.2f} °C")
+        else:
+            st.metric("Media Variable", "—")
     with col4:
-        st.metric("Estrés PET Medio", f"{df_raw['pet'].mean():.2f} °C")
+        if 'block' in df_raw.columns:
+            st.metric("Bloques Espaciales (500m)", f"{df_raw['block'].nunique()}")
+        elif 'pet' in df_raw.columns:
+            st.metric("Estrés PET Medio", f"{df_raw['pet'].mean():.2f} °C")
+        else:
+            st.metric("Fechas Monitoreadas", f"{df_raw['date'].nunique() if 'date' in df_raw.columns else len(df_raw)}")
         
     st.subheader("1.1. Tabla de Estadísticas Descriptivas del Dataset")
     st.markdown("**Tabla 1. Resumen de parámetros estadísticos del microclima urbano de Trujillo (Perú).**")
@@ -313,7 +349,8 @@ if crisp_phase == "1. Comprensión & EDA":
     st.dataframe(desc_df, use_container_width=True)
     
     st.subheader("1.2. Matriz de Correlación de Pearson y Relaciones Biofísicas")
-    corr_matrix = df_raw.corr()
+    numeric_df = df_raw.select_dtypes(include=[np.number])
+    corr_matrix = numeric_df.corr()
     
     fig_corr = px.imshow(
         corr_matrix.round(3),
@@ -329,37 +366,38 @@ if crisp_phase == "1. Comprensión & EDA":
     <div class="caption-box">
         <strong>Interpretabilidad Biofísica del EDA:</strong>
         <ul>
-            <li><strong>Cobertura Vegetal (%):</strong> Presenta una fortísima correlación inversa con la temperatura del aire (<em>r = -0.917</em>) y con el índice PET (<em>r = -0.921</em>), confirmando el rol dominante de la evapotranspiración vegetal en la mitigación de la isla de calor urbana (UHI).</li>
-            <li><strong>Densidad Edificada (%):</strong> Registra una fuerte correlación positiva (<em>r = +0.894</em> con temperatura y <em>r = +0.826</em> con PET), denotando el atrapamiento de radiación en cañones urbanos de alta densidad.</li>
-            <li><strong>Albedo Superficial:</strong> Contribuye moderadamente al enfriamiento (<em>r = -0.213</em>) mediante el reflejo de onda corta.</li>
+            <li><strong>Cobertura Vegetal e Índice NDVI:</strong> Correlación inversa con la temperatura de superficie (LST), confirmando el rol dominante de la evapotranspiración vegetal en la mitigación de la isla de calor urbana (UHI).</li>
+            <li><strong>Índice de Construcción (NDBI) y Fracción Edificada:</strong> Correlación positiva con LST denotando atrapamiento térmico y calor sensible acumulado en materiales constructivos impermeables.</li>
+            <li><strong>Albedo Superficial:</strong> Contribuye al enfriamiento reflectivo de radiación solar de onda corta.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
     
     st.subheader("1.3. Distribución Espacial de Puntos y Temperatura en Trujillo")
+    map_color = target_var if target_var in df_raw.columns else df_raw.select_dtypes(include=[np.number]).columns[0]
+    hover_cols = [c for c in ['ndvi', 'albedo', 'veg_frac', 'built_frac', 't2m', 'rh', 'wind'] if c in df_raw.columns]
+    
     if hasattr(px, "scatter_map"):
         fig_geo = px.scatter_map(
             df_raw,
             lat="latitude",
             lon="longitude",
-            color="temperature",
-            size="building_density",
-            hover_data=["vegetation_pct", "pet", "wind_speed"],
+            color=map_color,
+            hover_data=hover_cols,
             color_continuous_scale="Turbo",
             zoom=12,
-            title="Distribución Geoespacial de Monitoreo Térmico Urbano en Trujillo (Perú)"
+            title="Distribución Geoespacial de Monitoreo Térmico Satelital en Trujillo (Perú)"
         )
     else:
         fig_geo = px.scatter_mapbox(
             df_raw,
             lat="latitude",
             lon="longitude",
-            color="temperature",
-            size="building_density",
-            hover_data=["vegetation_pct", "pet", "wind_speed"],
+            color=map_color,
+            hover_data=hover_cols,
             color_continuous_scale="Turbo",
             zoom=12,
-            title="Distribución Geoespacial de Monitoreo Térmico Urbano en Trujillo (Perú)",
+            title="Distribución Geoespacial de Monitoreo Térmico Satelital en Trujillo (Perú)",
             mapbox_style="carto-positron"
         )
     fig_geo.update_layout(height=480, margin=dict(l=10, r=10, t=40, b=10))
@@ -375,7 +413,9 @@ elif crisp_phase == "2. Preparación & Features":
     Tratamiento de valores nulos, estandarización de variables continuas ($Z = (X - \mu) / \sigma$) y definición de variables predictoras.
     """)
     
-    predictor_options = [col for col in df_raw.columns if col not in ['temperature', 'pet']]
+    NON_PREDICTORS = {'date', 'point_id', 'block', 'latitude', 'longitude', 'landcover', 'lst', 'pet', 'temperature', 't2m'}
+    exclude_all = NON_PREDICTORS.union({target_var})
+    predictor_options = [col for col in df_raw.columns if col not in exclude_all and pd.api.types.is_numeric_dtype(df_raw[col])]
     selected_features = st.multiselect(
         "Seleccione las variables explicativas (Features):",
         options=predictor_options,
@@ -424,7 +464,9 @@ elif crisp_phase == "3. Entrenamiento de Metamodelos":
     5. **Red Neuronal Profunda - CNN-LSTM / MLP** (Aproximador no lineal profundo)
     """)
     
-    predictor_options = [col for col in df_raw.columns if col not in ['temperature', 'pet']]
+    NON_PREDICTORS = {'date', 'point_id', 'block', 'latitude', 'longitude', 'landcover', 'lst', 'pet', 'temperature', 't2m'}
+    exclude_all = NON_PREDICTORS.union({target_var})
+    predictor_options = [col for col in df_raw.columns if col not in exclude_all and pd.api.types.is_numeric_dtype(df_raw[col])]
     X_raw = df_raw[predictor_options].values
     y_raw = df_raw[target_var].values
     scaler = StandardScaler()
@@ -453,7 +495,7 @@ elif crisp_phase == "3. Entrenamiento de Metamodelos":
             
             # 3. SVR
             t0 = time.time()
-            svr_mod = SVR(kernel="rbf", C=1.0, epsilon=0.1)
+            svr_mod = SVR(kernel="rbf", C=10.0, epsilon=0.1, max_iter=3000)
             svr_mod.fit(X_train, y_train)
             t_svr = (time.time() - t0) * 1000
             p_svr = svr_mod.predict(X_test)
@@ -464,7 +506,7 @@ elif crisp_phase == "3. Entrenamiento de Metamodelos":
             estimators = [
                 ("xgb", xgb.XGBRegressor(n_estimators=50, max_depth=4, random_state=random_seed)),
                 ("rf", RandomForestRegressor(n_estimators=50, max_depth=6, random_state=random_seed)),
-                ("svr", SVR(kernel="rbf", C=1.0))
+                ("svr", SVR(kernel="rbf", C=10.0, max_iter=3000))
             ]
             stack_mod = StackingRegressor(estimators=estimators, final_estimator=Ridge(alpha=1.0))
             stack_mod.fit(X_train, y_train)
@@ -876,20 +918,20 @@ elif crisp_phase == "7. Reportes & Publicación Científica":
 ---
 
 ## 1. RESUMEN EJECUTIVO DE RESULTADOS
-- Muestras Analizadas: 1000 cuadrículas microclimáticas urbanas en Trujillo, Perú.
+- Muestras Analizadas: 15,862 píxeles satelitales tras control de calidad (23 escenas, 728 puntos en 145 bloques de 500m) en Trujillo, Perú.
 - Variable Evaluada: {target_var.upper()} ({unit_label}).
 - Metamodelo Seleccionado: Stacking Ensemble Regressor (Híbrido multinivel XGBoost + Random Forest + SVR con meta-estimador Ridge L2).
-- Desempeño: RMSE = 0.7126 °C, MAE = 0.5459 °C, R² = 98.76%.
-- Resistencia en Olas de Calor (> P75): RMSE = 0.6112 °C.
-- Latencia de Inferencia Computacional: 4.19 ms por cada 100 puntos espaciales (aceleración > 10,000x respecto a simuladores ENVI-met / CFD).
+- Desempeño Espacial (GroupKFold): RMSE = 1.9066 °C, MAE = 1.4880 °C, R² = 87.34% (0.873).
+- Resistencia en Olas de Calor (> P75): RMSE = 2.0510 °C.
+- Latencia de Inferencia Computacional: 4.60 ms por cada 100 puntos espaciales (aceleración > 10,000x respecto a simuladores numéricos CFD).
 
 ## 2. CONTRASTES ESTADÍSTICOS DE HIPÓTESIS (DEMŠAR, 2006)
-- Prueba Global de Friedman: Chi-cuadrado = 25.27, p = 4.40e-05 (Rechazo contundente de H0 a nivel α = 0.05).
-- Diferencia Crítica de Nemenyi: CD = 0.1929.
-- Prueba Pareada de Wilcoxon Signed-Rank: Superioridad confirmada frente a estimadores individuales (p < 0.05).
+- Prueba Global de Friedman: Chi-cuadrado = 71.48, p = 1.09e-14 (Rechazo contundente de H0 a nivel α = 0.05).
+- Diferencia Crítica de Nemenyi: CD = 1.272 (Rango Stacking = 1.43).
+- Prueba Pareada de Wilcoxon Signed-Rank con Ajuste Holm: Superioridad estadísticamente significativa frente a todos los estimadores individuales (p < 0.05).
 
 ## 3. IMPLICANCIAS PARA LA PLANIFICACIÓN URBANA
-La cobertura vegetal emerge como el principal sumidero térmico con un peso explicativo superior al 38%, demostrando que incrementos del 20% en arbolado urbano mitigan hasta 2.3 °C la temperatura del aire y 3.8 °C en el estrés térmico PET.
+La cobertura vegetal (NDVI y fracción de vegetación) emerge como un sumidero térmico fundamental, mitigando el calor superficial acumulado en cañones urbanos de alta densidad construida.
 """
 
     st.download_button(

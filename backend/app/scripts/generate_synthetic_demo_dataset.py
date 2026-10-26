@@ -2,7 +2,7 @@
 Generador de Dataset Sintético de Demostración de Microclima e Infraestructura Verde Urbana.
 NOTA: Este script genera datos SINTÉTICOS exclusivamente para demostración y pruebas sintéticas.
 Para investigación y el gemelo digital en producción, utilice el dataset empírico real satelital:
-`datos_reales_lst/data/final.csv`.
+`data/final.csv`.
 """
 
 import numpy as np

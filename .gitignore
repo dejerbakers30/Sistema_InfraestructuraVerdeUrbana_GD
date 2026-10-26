@@ -122,5 +122,5 @@ scripts/install_windows_service.ps1
 !backend/app/data/
 !backend/app/data/real_results/
 !backend/app/data/real_results/**
-!datos_reales_lst/
-!datos_reales_lst/**
+!frontend/public/figures/
+!frontend/public/figures/**
