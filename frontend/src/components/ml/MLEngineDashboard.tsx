@@ -108,12 +108,55 @@ export default function MLEngineDashboard({
 
   const apiUrl = getApiUrl()
 
+  const refreshAccessToken = async (): Promise<string | null> => {
+    if (typeof window === 'undefined') return null
+
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (!refreshToken) return null
+
+    try {
+      const res = await fetch(`${apiUrl}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      })
+
+      if (!res.ok) throw new Error('Refresh token inválido o expirado')
+
+      const data = await res.json()
+      if (!data.access_token) throw new Error('La respuesta no contiene un access token')
+
+      localStorage.setItem('access_token', data.access_token)
+      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
+      return data.access_token
+    } catch (error) {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      console.warn('Sesión expirada; se requiere iniciar sesión nuevamente.', error)
+      return null
+    }
+  }
+
+  const fetchWithAuth = async (url: string, init: RequestInit = {}): Promise<Response> => {
+    const headers = new Headers(init.headers)
+    const authHeaders = getAuthHeaders()
+    Object.entries(authHeaders).forEach(([name, value]) => headers.set(name, value))
+
+    let res = await fetch(url, { ...init, headers })
+    if (res.status !== 401) return res
+
+    const accessToken = await refreshAccessToken()
+    if (!accessToken) return res
+
+    headers.set('Authorization', `Bearer ${accessToken}`)
+    res = await fetch(url, { ...init, headers })
+    return res
+  }
+
   // Fetch available datasets
   const fetchDatasets = async () => {
     try {
-      const res = await fetch(`${apiUrl}/ml/datasets`, {
-        headers: getAuthHeaders()
-      })
+      const res = await fetchWithAuth(`${apiUrl}/ml/datasets`)
       if (res.ok) {
         const data = await res.json()
         setDatasets(data)
@@ -137,9 +180,7 @@ export default function MLEngineDashboard({
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${apiUrl}/ml/jobs/${jobId}`, {
-          headers: getAuthHeaders()
-        })
+        const res = await fetchWithAuth(`${apiUrl}/ml/jobs/${jobId}`)
         if (res.ok) {
           const data = await res.json()
           setProgress(data.progress)
@@ -166,9 +207,7 @@ export default function MLEngineDashboard({
 
   const fetchJobResults = async (id: string) => {
     try {
-      const res = await fetch(`${apiUrl}/ml/jobs/${id}/results`, {
-        headers: getAuthHeaders()
-      })
+      const res = await fetchWithAuth(`${apiUrl}/ml/jobs/${id}/results`)
       if (res.ok) {
         const data = await res.json()
         setModels(data.models || [])
@@ -188,9 +227,8 @@ export default function MLEngineDashboard({
     formData.append('file', file)
 
     try {
-      const res = await fetch(`${apiUrl}/ml/datasets/upload`, {
+      const res = await fetchWithAuth(`${apiUrl}/ml/datasets/upload`, {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: formData
       })
       if (res.ok) {
@@ -219,9 +257,8 @@ export default function MLEngineDashboard({
   const handleSeedBenchmark = async () => {
     setIsSeedingBenchmark(true)
     try {
-      const res = await fetch(`${apiUrl}/ml/datasets/seed-benchmark`, {
+      const res = await fetchWithAuth(`${apiUrl}/ml/datasets/seed-benchmark`, {
         method: 'POST',
-        headers: getAuthHeaders()
       })
       if (res.ok) {
         const data = await res.json()
@@ -230,7 +267,11 @@ export default function MLEngineDashboard({
         setSelectedDatasetId(data.id)
       } else {
         const errData = await res.json().catch(() => ({}))
-        showToast(`No se pudo cargar el benchmark: ${errData.detail || 'Error'}`, 'error')
+        if (res.status === 401) {
+          showToast('Tu sesión expiró. Inicia sesión nuevamente para cargar el benchmark.', 'error')
+        } else {
+          showToast(`No se pudo cargar el benchmark: ${errData.detail || 'Error'}`, 'error')
+        }
       }
     } catch (err: any) {
       console.error(err)
@@ -256,9 +297,8 @@ export default function MLEngineDashboard({
     formData.append('name', 'Entrenamiento 5 Modelos ML')
 
     try {
-      const res = await fetch(`${apiUrl}/ml/train`, {
+      const res = await fetchWithAuth(`${apiUrl}/ml/train`, {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: formData
       })
 
@@ -280,9 +320,8 @@ export default function MLEngineDashboard({
 
   const handleActivateModel = async (modelId: string) => {
     try {
-      const res = await fetch(`${apiUrl}/ml/models/${modelId}/activate`, {
+      const res = await fetchWithAuth(`${apiUrl}/ml/models/${modelId}/activate`, {
         method: 'POST',
-        headers: getAuthHeaders()
       })
       if (res.ok) {
         setModels(prev =>
