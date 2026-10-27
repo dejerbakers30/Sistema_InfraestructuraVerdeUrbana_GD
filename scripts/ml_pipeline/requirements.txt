@@ -1,0 +1,8 @@
+pandas
+numpy
+scipy
+scikit-learn>=1.6
+xgboost>=2.0
+optuna>=3.0
+tensorflow-cpu>=2.16
+matplotlib

@@ -6,8 +6,9 @@ Aplicación de Gemelos Digitales para simular y visualizar el impacto de la infr
 
 - [Descripción](#descripción)
 - [Características](#características)
+- [Datos Reales y Reproducibilidad Científica](#-datos-reales-y-reproducibilidad-científica-trujillo-perú)
 - [Stack Tecnológico](#stack-tecnológico)
-- [Arquitectura](#arquitectura)
+- [Arquitectura Modular](#arquitectura-modular)
 - [Requisitos Previos](#requisitos-previos)
 - [Instalación](#instalación)
 - [Configuración](#configuración)
@@ -52,6 +53,74 @@ Esta aplicación permite a planificadores urbanos e investigadores:
 - Exportación a Word (python-docx)
 - Exportación a Excel (openpyxl)
 - Personalización de variables y formatos
+
+## 🛰️ Datos Reales y Reproducibilidad Científica (Trujillo, Perú)
+
+El gemelo digital integra un **dataset empírico real satelital y biofísico** de la ciudad de Trujillo, Perú (periodo 2023–2025), estructurado para entrenar y validar 5 arquitecturas de metamodelado microclimático:
+
+- **Fuentes Satelitales**: Landsat 8-9 (USGS/NASA), Sentinel-2 (Copernicus ESA), reanálisis ERA5-Land (ECMWF), cobertura del suelo ESA WorldCover 10 m y topografía digital SRTM (NASA/USGS).
+- **Control de Calidad (QC)**: 15,862 píxeles válidos tras eliminar nubes, niebla costera, agua y valores extremos (23 escenas satelitales completas, 728 puntos de muestreo en 145 bloques espaciales independientes de 500 m).
+- **Metamodelo Óptimo**: *Stacking Ensemble Regressor* ($RMSE = 1.907$ °C, $R^2 = 0.873$, latencia $4.60$ ms por 100 puntos espaciales) con significancia confirmada mediante tests de Friedman ($\chi^2 = 71.48$, $p = 1.09 \times 10^{-14}$) y Nemenyi post-hoc ($CD = 1.272$).
+
+### Estructura Modular de Archivos
+
+```
+Sistema_InfraestructuraVerdeUrbana_GD/
+├── data/                                         # Capa de datos empíricos
+│   ├── dataset_real_LST_Trujillo.csv            # Datos crudos exportados de GEE (18,078 filas, 29 escenas)
+│   ├── clean.csv                                # Filtrado sin agua y con bloques espaciales
+│   └── final.csv                                # Dataset final validado tras QC (15,862 filas, 23 escenas)
+│
+├── scripts/
+│   ├── earth_engine/
+│   │   └── export_dataset_LST_Trujillo.js       # Script reproducible en Google Earth Engine
+│   └── ml_pipeline/                             # Pipeline offline de Machine Learning
+│       ├── requirements.txt                     # Dependencias científicas (Optuna, Scikit-learn, etc.)
+│       ├── clean.py                             # Limpieza y partición en bloques de 500 m
+│       ├── qc.py                                # Filtros de calidad atmosférica y nubosidad
+│       ├── train.py                             # Optimización y validación espacial/temporal
+│       ├── cnnlstm.py                           # Red Neuronal CNN-LSTM
+│       ├── stats_figs.py                        # Contrastes estadísticos y generación de figuras 2 a 7
+│       └── random_cv.py                         # Comparación entre validación aleatoria y espacial
+│
+├── backend/app/data/real_results/               # Resultados y figuras servidos por FastAPI
+│   ├── clean_log.json                           # Métricas del control de calidad
+│   ├── descriptivos.csv                         # Estadísticas descriptivas de los datos
+│   ├── estadistica.json                         # Friedman, Nemenyi, Wilcoxon-Holm y residuos
+│   ├── hiperparametros.json                     # Hiperparámetros óptimos hallados por Optuna
+│   ├── oof_espacial.csv                         # Predicciones fuera de pliegue (espacial)
+│   ├── oof_temporal.csv                         # Predicciones fuera de pliegue (temporal)
+│   ├── random_vs_spatial.json                   # Análisis de sesgo de autocorrelación espacial
+│   ├── resultados.json                          # Métricas consolidadas (RMSE, MAE, R², latencia)
+│   └── fig2_obs_pred.png ... fig7_importancia.png # Figuras científicas de alta resolución
+│
+├── frontend/public/figures/real_results/        # Copia estática de figuras para Next.js
+└── streamlit_app/app.py                         # Aplicación interactiva con datos reales
+```
+
+### Reproducción Paso a Paso
+
+Para reproducir el pipeline completo desde la terminal:
+
+```bash
+# 1. Instalar dependencias del pipeline científico
+pip install -r scripts/ml_pipeline/requirements.txt
+
+# 2. Ejecutar limpieza inicial y control de calidad
+python scripts/ml_pipeline/clean.py
+python scripts/ml_pipeline/qc.py
+
+# 3. Entrenar y evaluar metamodelos con validación cruzada espacial (GroupKFold)
+python scripts/ml_pipeline/train.py
+
+# 4. Generar contrastes de hipótesis (Demšar, 2006) y figuras de publicación
+python scripts/ml_pipeline/stats_figs.py
+
+# 5. Comparar validación aleatoria vs. validación espacial
+python scripts/ml_pipeline/random_cv.py
+```
+
+> **Licencias**: Código liberado bajo licencia MIT (`LICENSE`). Datos derivados bajo licencia Creative Commons Atribución 4.0 Internacional (CC BY 4.0).
 
 ## 🛠 Stack Tecnológico
 

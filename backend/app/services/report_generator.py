@@ -37,11 +37,11 @@ DEFAULT_GREEN_INFRASTRUCTURE = [
 ]
 
 DEFAULT_ML_MODELS = [
-    {"name": "Random Forest Regressor", "rmse": 0.3214, "mae": 0.2410, "r2": 0.9482, "mse": 0.1033, "is_active": True},
-    {"name": "XGBoost Regressor", "rmse": 0.3451, "mae": 0.2612, "r2": 0.9391, "mse": 0.1191, "is_active": False},
-    {"name": "LightGBM Regressor", "rmse": 0.3580, "mae": 0.2745, "r2": 0.9345, "mse": 0.1281, "is_active": False},
-    {"name": "Deep Neural Network (MLP)", "rmse": 0.3892, "mae": 0.2980, "r2": 0.9230, "mse": 0.1514, "is_active": False},
-    {"name": "Support Vector Regressor (SVR)", "rmse": 0.4210, "mae": 0.3315, "r2": 0.9095, "mse": 0.1772, "is_active": False},
+    {"name": "Stacking Ensemble", "rmse": 1.9066, "mae": 1.3835, "r2": 0.8734, "mse": 3.6351, "is_active": True},
+    {"name": "XGBoost Regressor", "rmse": 1.9324, "mae": 1.4101, "r2": 0.8700, "mse": 3.7343, "is_active": False},
+    {"name": "Random Forest Regressor", "rmse": 2.0524, "mae": 1.5033, "r2": 0.8532, "mse": 4.2123, "is_active": False},
+    {"name": "CNN-LSTM Neural Network", "rmse": 2.2691, "mae": 1.6406, "r2": 0.8207, "mse": 5.1486, "is_active": False},
+    {"name": "Support Vector Regressor (SVR)", "rmse": 2.3961, "mae": 1.7758, "r2": 0.8000, "mse": 5.7413, "is_active": False},
 ]
 
 
@@ -311,20 +311,49 @@ class ReportGenerator:
                 ["Reducción Máx. UHI", "-2.6", "°C", "Significativo"]
             ]
         elif rtype == "ml_evaluation":
+            chi2_str = "71.48"
+            p_str = "p < 0.001"
+            cd_str = "1.272"
+            r2_str = "87.34"
+            rmse_str = "1.9066"
+            try:
+                from app.services.real_results_service import real_results_service
+                r_data = real_results_service.load_all_results()
+                stat = r_data.get("estadistica", {})
+                sp_stack = r_data.get("metricas", {}).get("espacial", {}).get("Stacking Ensemble", {})
+                if stat.get("friedman_chi2") is not None:
+                    chi2_str = f"{stat['friedman_chi2']:.2f}"
+                if stat.get("CD_nemenyi") is not None:
+                    cd_str = f"{stat['CD_nemenyi']:.3f}"
+                if sp_stack.get("R2") is not None:
+                    r2_str = f"{sp_stack['R2']*100:.2f}"
+                if sp_stack.get("RMSE") is not None:
+                    rmse_str = f"{sp_stack['RMSE']:.4f}"
+            except Exception:
+                pass
+
             return [
-                ["Modelo Recomendado", "Stacking (XGB+RF)", "-", "Ganador Activo"],
-                ["Precisión R² Score", "94.82", "%", "Sobresaliente"],
-                ["RMSE de Regresión", "0.3214", "-", "Mínimo Error"],
-                ["Test de Friedman", "F = 18.42 (p < 0.001)", "-", "Significativo"],
-                ["Diferencia Crítica Nemenyi", "CD = 1.124", "-", "Distintivo"]
+                ["Modelo Recomendado", "Stacking Ensemble", "-", "Ganador Activo"],
+                ["Precisión R² Score", r2_str, "%", "Sobresaliente"],
+                ["RMSE de Regresión", rmse_str, "°C", "Mínimo Error"],
+                ["Test de Friedman", f"χ² = {chi2_str} ({p_str})", "-", "Significativo"],
+                ["Diferencia Crítica Nemenyi", f"CD = {cd_str}", "-", "Distintivo"]
             ]
         else:
+            r2_val = "87.34"
+            try:
+                from app.services.real_results_service import real_results_service
+                sp_stack = real_results_service.load_all_results().get("metricas", {}).get("espacial", {}).get("Stacking Ensemble", {})
+                if sp_stack.get("R2") is not None:
+                    r2_val = f"{sp_stack['R2']*100:.2f}"
+            except Exception:
+                pass
             return [
                 ["Superficie Verde Total", "18.4", "ha", "Óptimo"],
                 ["Confort Térmico PET", "27.8", "°C", "Confortable"],
                 ["Reducción Máx. Temp.", "-3.8", "°C", "Significativo"],
                 ["Modelo ML Ganador", "Stacking Ensemble", "-", "Activo"],
-                ["Precisión R² ML", "94.82", "%", "Alto"]
+                ["Precisión R² ML", r2_val, "%", "Alto"]
             ]
 
     def _create_kpi_table(self, simulation_data: Dict[str, Any], rtype: str = "green_infrastructure") -> Table:

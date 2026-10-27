@@ -1,16 +1,17 @@
 """
-Generador de Dataset Empírico Real de Microclima e Infraestructura Verde Urbana.
-Basado en los benchmarks UTHECA_USE (MDPI Data 2024 / Zenodo) y Red de Sensores de Microclima.
-Genera 1,000 registros empíricos calibrados con relaciones físicas no lineales y termodinámicas.
+Generador de Dataset Sintético de Demostración de Microclima e Infraestructura Verde Urbana.
+NOTA: Este script genera datos SINTÉTICOS exclusivamente para demostración y pruebas sintéticas.
+Para investigación y el gemelo digital en producción, utilice el dataset empírico real satelital:
+`data/final.csv`.
 """
 
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
-def generate_real_benchmark_dataset(
+def generate_synthetic_demo_dataset(
     num_samples: int = 1000,
-    output_csv_backend: str = "backend/uploads/ml_datasets/real_urban_microclimate_dataset.csv",
+    output_csv_backend: str = "backend/uploads/ml_datasets/synthetic_demo_microclimate_dataset.csv",
     output_csv_frontend: str = None,
     seed: int = 42
 ):
@@ -119,5 +120,8 @@ def generate_real_benchmark_dataset(
 
     return df
 
+# Alias for backwards compatibility if needed
+generate_real_benchmark_dataset = generate_synthetic_demo_dataset
+
 if __name__ == "__main__":
-    generate_real_benchmark_dataset(1000)
+    generate_synthetic_demo_dataset(1000)

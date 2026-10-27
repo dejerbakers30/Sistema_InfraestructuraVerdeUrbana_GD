@@ -11,13 +11,15 @@ services:
     name: gemelo-digital-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerContext: .
     plan: free
     region: ohio
     healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
         value: production
+      - key: REAL_DATA_DIR
+        value: /app/app/data/real_results
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM

@@ -4,6 +4,7 @@ Datasets, Training Jobs, Model Comparison, Statistical Significance Tests, and P
 """
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Optional, Dict, Any
@@ -22,6 +23,7 @@ from app.models.ml_models import (
 from app.api.v1.endpoints.auth import get_current_user
 from app.services.ml_engine import ml_engine_service
 from app.services.statistical_tester import statistical_tester_service
+from app.services.real_results_service import real_results_service
 
 router = APIRouter()
 
@@ -61,22 +63,27 @@ async def run_training_background_task(
 
             # Load dataset and extract features
             if not os.path.exists(dataset_path):
-                alt_path = os.path.join(ML_UPLOAD_DIR, os.path.basename(dataset_path))
-                if os.path.exists(alt_path):
-                    dataset_path = alt_path
-                elif os.path.basename(dataset_path) == "real_urban_microclimate_dataset.csv":
-                    try:
-                        from scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
-                        generate_real_benchmark_dataset(1000, output_csv_backend=alt_path, output_csv_frontend=None)
-                    except Exception:
-                        from app.scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
-                        generate_real_benchmark_dataset(1000, output_csv_backend=alt_path, output_csv_frontend=None)
-                    dataset_path = alt_path
+                candidates = [
+                    os.path.join(ML_UPLOAD_DIR, os.path.basename(dataset_path)),
+                    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data", os.path.basename(dataset_path))),
+                    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data", "final.csv")),
+                    os.path.abspath(os.path.join(os.getcwd(), "data", os.path.basename(dataset_path))),
+                    os.path.abspath(os.path.join(os.getcwd(), "data", "final.csv")),
+                    os.path.join(real_results_service.get_real_data_dir(), os.path.basename(dataset_path)),
+                ]
+                for c in candidates:
+                    if os.path.exists(c) and os.path.isfile(c):
+                        dataset_path = c
+                        break
+                if not os.path.exists(dataset_path):
+                    raise FileNotFoundError(f"Dataset path no encontrado: {dataset_path}")
 
             df = ml_engine_service.load_dataset(dataset_path)
+            groups = df['block'].values if 'block' in df.columns else None
             X, y, selected_features, scaler = ml_engine_service.extract_features_and_target(
                 df, target_column=target_variable, feature_columns=feature_columns
             )
+            print(f"Features seleccionadas para entrenamiento ({len(selected_features)}): {selected_features}")
             
             job.selected_features = selected_features
             job.progress = 25.0
@@ -90,7 +97,7 @@ async def run_training_background_task(
             await db.commit()
             
             results = ml_engine_service.train_all_models(
-                X, y, artifact_dir=artifact_dir, feature_names=selected_features
+                X, y, artifact_dir=artifact_dir, feature_names=selected_features, groups=groups
             )
 
             job.progress = 75.0
@@ -243,19 +250,29 @@ async def seed_benchmark_dataset(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """
-    Loads or creates the official real-world benchmark dataset (UTHECA/Sensors, 1,000 empirical rows)
-    in the database for instant testing and scientific verification.
+    Registra el dataset empírico real satelital y meteorológico de Trujillo (Landsat/Sentinel-2/ERA5-Land, 2023–2025)
+    en la base de datos para pruebas y modelamiento reproducible.
     """
-    benchmark_filename = "real_urban_microclimate_dataset.csv"
-    benchmark_path = os.path.join(ML_UPLOAD_DIR, benchmark_filename)
+    benchmark_filename = "final.csv"
+    
+    # Candidate paths for data/final.csv
+    candidates = [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data", "final.csv")),
+        os.path.abspath(os.path.join(os.getcwd(), "data", "final.csv")),
+        os.path.join(ML_UPLOAD_DIR, "final.csv"),
+        "/app/data/final.csv"
+    ]
+    benchmark_path = None
+    for c in candidates:
+        if os.path.exists(c) and os.path.isfile(c):
+            benchmark_path = c
+            break
 
-    if not os.path.exists(benchmark_path):
-        try:
-            from scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
-            generate_real_benchmark_dataset(1000, output_csv_backend=benchmark_path, output_csv_frontend=None)
-        except Exception:
-            from app.scripts.generate_real_benchmark_dataset import generate_real_benchmark_dataset
-            generate_real_benchmark_dataset(1000, output_csv_backend=benchmark_path, output_csv_frontend=None)
+    if not benchmark_path:
+        raise HTTPException(
+            status_code=404,
+            detail="El archivo 'data/final.csv' no existe en el sistema. Ejecute primero scripts/ml_pipeline/clean.py y qc.py para generarlo."
+        )
 
     # Check if already in DB
     existing = await db.execute(select(MLDataset).where(MLDataset.filename == benchmark_filename))
@@ -268,7 +285,7 @@ async def seed_benchmark_dataset(
             "rows_count": ds.rows_count,
             "columns_list": ds.columns_list,
             "file_type": ds.file_type,
-            "message": "Dataset empírico real ya disponible en el sistema"
+            "message": "Dataset LST real Trujillo ya disponible en el sistema"
         }
 
     df = ml_engine_service.load_dataset(benchmark_path)
@@ -276,8 +293,8 @@ async def seed_benchmark_dataset(
     user_uuid = uuid.UUID(str(user_id_str)) if user_id_str else None
 
     dataset_obj = MLDataset(
-        name="Benchmark Real Microclima Urbano (UTHECA-1000)",
-        description="Dataset empírico calibrado de microclima e infraestructura verde urbana (1,000 registros)",
+        name="LST real Trujillo — Landsat/Sentinel-2/ERA5-Land (2023–2025)",
+        description="Dataset empírico real multiespectral y meteorológico de Trujillo, Perú (15.862 registros tras control de calidad, 23 escenas satelitales, 728 puntos)",
         filename=benchmark_filename,
         file_path=benchmark_path,
         file_type="csv",
@@ -296,7 +313,7 @@ async def seed_benchmark_dataset(
         "rows_count": dataset_obj.rows_count,
         "columns_list": dataset_obj.columns_list,
         "file_type": dataset_obj.file_type,
-        "message": "Dataset empírico real (1,000 registros) cargado exitosamente en el sistema"
+        "message": "Dataset LST real Trujillo registrado exitosamente en el sistema"
     }
 
 
@@ -499,40 +516,78 @@ async def run_prediction(
     db: AsyncSession = Depends(get_db),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Generates microclimate predictions using an active trained model"""
+    """
+    Generates microclimate predictions using an active trained model.
+    Strictly uses the features with which the model was trained, returning 400/404 on missing inputs.
+    """
     m_uuid = uuid.UUID(model_id)
     res_m = await db.execute(select(MLModel).where(MLModel.id == m_uuid))
     model_obj = res_m.scalar_one_or_none()
     
     if not model_obj:
-        raise HTTPException(status_code=404, detail="Model not found")
+        raise HTTPException(status_code=404, detail="Modelo no encontrado")
 
     # Load trained artifact
     if not os.path.exists(model_obj.model_artifact_path):
-        raise HTTPException(status_code=404, detail="Model artifact binary not found on server")
+        raise HTTPException(status_code=404, detail="Archivo binario del modelo no encontrado en el servidor")
+
+    if not dataset_id:
+        raise HTTPException(status_code=400, detail="dataset_id es requerido para realizar predicciones")
+
+    d_uuid = uuid.UUID(dataset_id)
+    res_d = await db.execute(select(MLDataset).where(MLDataset.id == d_uuid))
+    dataset_obj = res_d.scalar_one_or_none()
+    if not dataset_obj:
+        raise HTTPException(status_code=404, detail="Dataset no encontrado")
+
+    if not os.path.exists(dataset_obj.file_path):
+        raise HTTPException(status_code=404, detail=f"Archivo del dataset no encontrado en disco: {dataset_obj.file_path}")
+
+    # Determine required features from features.json or model_obj.job.selected_features
+    artifact_dir = os.path.dirname(model_obj.model_artifact_path)
+    features_file = os.path.join(artifact_dir, "features.json")
+    required_features = None
+    if os.path.exists(features_file):
+        try:
+            import json
+            with open(features_file, "r", encoding="utf-8") as f:
+                required_features = json.load(f)
+        except Exception:
+            pass
+
+    if not required_features and model_obj.job and model_obj.job.selected_features:
+        required_features = model_obj.job.selected_features
+
+    df = ml_engine_service.load_dataset(dataset_obj.file_path)
+
+    if not required_features:
+        standard_features = ["ndvi", "ndbi", "albedo", "veg_frac", "built_frac", "elevation", "t2m", "rh", "wind", "ssrd"]
+        if all(col in df.columns for col in standard_features):
+            required_features = standard_features
+        else:
+            raise HTTPException(status_code=400, detail="No se pudieron determinar las variables predictoras (features) exactas del modelo")
+
+    # Validate presence of required features
+    missing_cols = [c for c in required_features if c not in df.columns]
+    if missing_cols:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El dataset no contiene las variables predictoras requeridas con las que se entrenó el modelo: {missing_cols}"
+        )
+
+    df_clean = df[required_features].dropna()
+    if df_clean.empty:
+        raise HTTPException(status_code=400, detail="El dataset no contiene registros válidos sin valores nulos para las variables requeridas")
 
     import joblib
     model_artifact = joblib.load(model_obj.model_artifact_path)
-
-    # Load dataset
-    if dataset_id:
-        d_uuid = uuid.UUID(dataset_id)
-        res_d = await db.execute(select(MLDataset).where(MLDataset.id == d_uuid))
-        dataset_obj = res_d.scalar_one_or_none()
-        if dataset_obj:
-            df = ml_engine_service.load_dataset(dataset_obj.file_path)
-            numeric_df = df.select_dtypes(include=['number']).dropna()
-            X = numeric_df.values
-            preds = model_artifact.predict(X).tolist()
-        else:
-            preds = [24.5, 25.2, 23.8, 26.1, 24.9]
-    else:
-        preds = [24.5, 25.2, 23.8, 26.1, 24.9]
+    X = df_clean.values
+    preds = model_artifact.predict(X).tolist()
 
     prediction_obj = MLPrediction(
         model_id=model_obj.id,
-        dataset_id=uuid.UUID(dataset_id) if dataset_id else None,
-        target_variable=model_obj.job.target_variable if model_obj.job else "temperature",
+        dataset_id=dataset_obj.id,
+        target_variable=model_obj.job.target_variable if model_obj.job else "lst",
         predictions_data={"predictions": preds, "count": len(preds)},
         metrics_summary=model_obj.metrics
     )
@@ -545,3 +600,26 @@ async def run_prediction(
         "predictions_count": len(preds),
         "sample_predictions": preds[:10]
     }
+
+
+@router.get("/real-results", response_model=Dict[str, Any])
+async def get_real_results():
+    """
+    Returns empirical experimental results from the real satellite/climate LST dataset in Trujillo, Peru.
+    Includes model metrics (spatial and temporal), latency, Friedman/Nemenyi/Wilcoxon tests,
+    permutation feature importance, descriptives, and QC log.
+    """
+    return real_results_service.load_all_results()
+
+
+@router.get("/real-results/figures/{name}")
+async def get_real_figure(name: str):
+    """
+    Serves official publication figures (fig2 to fig7) generated during the empirical research.
+    Validates figure name to prevent directory traversal.
+    """
+    file_path = real_results_service.get_figure_path(name)
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail=f"Figura '{name}' no encontrada o no autorizada")
+    return FileResponse(file_path, media_type="image/png")
+

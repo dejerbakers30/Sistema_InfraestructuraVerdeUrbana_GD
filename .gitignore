@@ -58,7 +58,7 @@ tmp/
 # Node.js / Frontend
 node_modules/
 .next/
-out/
+frontend/out/
 build/
 dist/
 .cache/
@@ -115,3 +115,12 @@ dump.rdb
 !scripts/*.bat
 !scripts/*.ps1
 scripts/install_windows_service.ps1
+
+# Allow real LST dataset and outputs
+!data/
+!data/*.csv
+!backend/app/data/
+!backend/app/data/real_results/
+!backend/app/data/real_results/**
+!frontend/public/figures/
+!frontend/public/figures/**

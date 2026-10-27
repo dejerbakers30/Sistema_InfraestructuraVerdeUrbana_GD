@@ -9,16 +9,18 @@ import ScientificValidationSuite, {
   ModelMetric,
   StatisticalTestsData
 } from './ScientificValidationSuite'
+import RealResultsView from './RealResultsView'
 
 export default function MLEngineDashboard({
   onTrainingStateChange
 }: {
   onTrainingStateChange?: (isTraining: boolean) => void
 }) {
+  const [mainTab, setMainTab] = useState<'real_results' | 'training'>('real_results')
   const [file, setFile] = useState<File | null>(null)
   const [datasets, setDatasets] = useState<any[]>([])
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>('')
-  const [targetVariable, setTargetVariable] = useState<string>('temperature')
+  const [targetVariable, setTargetVariable] = useState<string>('lst')
   const [isUploading, setIsUploading] = useState<boolean>(false)
   const [isSeedingBenchmark, setIsSeedingBenchmark] = useState<boolean>(false)
 
@@ -223,7 +225,7 @@ export default function MLEngineDashboard({
       })
       if (res.ok) {
         const data = await res.json()
-        showToast('Dataset empírico real (1,000 registros) cargado con éxito.', 'success')
+        showToast('Dataset empírico real LST Trujillo (15,862 registros, 23 escenas) cargado con éxito.', 'success')
         await fetchDatasets()
         setSelectedDatasetId(data.id)
       } else {
@@ -350,8 +352,40 @@ export default function MLEngineDashboard({
         </div>
       )}
 
-      {/* Top Banner Header */}
-      <div className="bg-gradient-to-r from-teal-700 via-emerald-700 to-cyan-800 dark:from-cyan-950 dark:via-teal-900 dark:to-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden border border-teal-500/30 dark:border-teal-800/40">
+      {/* Selector de Pestaña Principal */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-200/70 dark:bg-slate-900/90 rounded-2xl border border-slate-300/80 dark:border-slate-800 w-fit">
+        <button
+          type="button"
+          onClick={() => setMainTab('real_results')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
+            mainTab === 'real_results'
+              ? 'bg-teal-600 text-white shadow-md shadow-teal-600/30'
+              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-300/60 dark:hover:bg-slate-800'
+          }`}
+        >
+          <span>🔬</span>
+          <span>Resultados con Datos Reales (Satelital LST)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainTab('training')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
+            mainTab === 'training'
+              ? 'bg-teal-600 text-white shadow-md shadow-teal-600/30'
+              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-300/60 dark:hover:bg-slate-800'
+          }`}
+        >
+          <span>⚡</span>
+          <span>Entrenamiento Interactivo & Modelos ML</span>
+        </button>
+      </div>
+
+      {mainTab === 'real_results' ? (
+        <RealResultsView />
+      ) : (
+        <>
+          {/* Top Banner Header */}
+          <div className="bg-gradient-to-r from-teal-700 via-emerald-700 to-cyan-800 dark:from-cyan-950 dark:via-teal-900 dark:to-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden border border-teal-500/30 dark:border-teal-800/40">
         <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 bg-cyan-400/15 dark:bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 w-full">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-200 dark:text-teal-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-teal-400/30 dark:border-teal-500/30">
@@ -422,7 +456,7 @@ export default function MLEngineDashboard({
                   </>
                 ) : (
                   <>
-                    <span>🔬 Cargar Dataset Real de Referencia (UTHECA - 1,000 filas)</span>
+                    <span>🔬 Cargar Dataset Real de Referencia LST Trujillo (15,862 filas)</span>
                   </>
                 )}
               </button>
@@ -463,6 +497,7 @@ export default function MLEngineDashboard({
                 onChange={e => setTargetVariable(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-teal-500"
               >
+                <option value="lst">Temperatura de Superficie LST (°C) — Benchmark Real</option>
                 <option value="temperature">Temperatura del Aire (°C)</option>
                 <option value="humidity">Humedad Relativa (%)</option>
                 <option value="pet">PET (Equivalente Fisiológico °C)</option>
@@ -749,6 +784,8 @@ export default function MLEngineDashboard({
           targetVariable={targetVariable}
           onActivateModel={handleActivateModel}
         />
+      )}
+        </>
       )}
     </div>
   )
